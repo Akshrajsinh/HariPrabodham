@@ -1,0 +1,6 @@
+[
+  { "id": "team-1", "name": "Team Ganga", "color": "#FF6B1A" },
+  { "id": "team-2", "name": "Team Yamuna", "color": "#FFA733" },
+  { "id": "team-3", "name": "Team Saraswati", "color": "#D4A94A" },
+  { "id": "team-4", "name": "Team Narmada", "color": "#E85400" }
+]

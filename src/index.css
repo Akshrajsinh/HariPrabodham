@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #D4A94A55 transparent;
+  }
+  :focus-visible {
+    outline: 2px solid #FFA733;
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl bg-white/[0.06] border border-white/10 shadow-glass;
+  }
+  .glass-light {
+    @apply backdrop-blur-xl bg-white/60 border border-white/40 shadow-glass;
+  }
+  .brass-divider {
+    background: linear-gradient(90deg, transparent, #D4A94A, transparent);
+    height: 1px;
+  }
+  .temple-arch-top {
+    border-top-left-radius: 3rem;
+    border-top-right-radius: 3rem;
+  }
+  .text-gradient-saffron {
+    background: linear-gradient(135deg, #FFD08A 0%, #FF6B1A 60%, #E85400 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .btn-primary {
+    @apply relative font-score font-semibold tracking-wide rounded-2xl px-6 py-3.5
+      bg-gradient-to-br from-saffron-400 to-saffron-600 text-white shadow-glow
+      transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_55px_rgba(255,107,26,0.6)]
+      active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-secondary {
+    @apply font-score font-medium rounded-2xl px-6 py-3.5 glass text-cream/90
+      transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98]
+      disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-ghost {
+    @apply font-score text-sm text-cream/60 hover:text-cream transition-colors duration-150;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}

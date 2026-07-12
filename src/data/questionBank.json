@@ -1,0 +1,233 @@
+{
+  "round1": [],
+  "round2": [
+    {
+      "id": "q1",
+      "question": "In the Bhagavad Gita, who is the charioteer of Arjuna?",
+      "options": ["Krishna", "Balarama", "Yudhishthira", "Karna"],
+      "correctIndex": 0,
+      "explanation": "Lord Krishna serves as Arjuna's charioteer and delivers the teachings of the Bhagavad Gita on the battlefield of Kurukshetra.",
+      "category": "Scriptures",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": "q2",
+      "question": "Which river is considered the holiest in Hindu tradition?",
+      "options": ["Yamuna", "Ganga", "Godavari", "Saraswati"],
+      "correctIndex": 1,
+      "explanation": "The Ganga (Ganges) is revered as the holiest river, believed to purify sins and grant moksha.",
+      "category": "Traditions",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": "q3",
+      "question": "What does the word 'Yoga' literally mean?",
+      "options": ["Strength", "Union", "Breath", "Silence"],
+      "correctIndex": 1,
+      "explanation": "Yoga comes from the Sanskrit root 'yuj', meaning to unite or join — the union of body, mind, and spirit.",
+      "category": "Philosophy",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "id": "q4",
+      "question": "Who is known as the author of the Ramayana?",
+      "options": ["Ved Vyasa", "Valmiki", "Tulsidas", "Kalidasa"],
+      "correctIndex": 1,
+      "explanation": "Sage Valmiki is traditionally credited as the original author of the Ramayana in Sanskrit.",
+      "category": "Scriptures",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "id": "q5",
+      "question": "How many chapters (Adhyayas) does the Bhagavad Gita have?",
+      "options": ["12", "18", "24", "108"],
+      "correctIndex": 1,
+      "explanation": "The Bhagavad Gita contains 18 chapters, each covering a distinct aspect of yoga and duty.",
+      "category": "Scriptures",
+      "difficulty": "hard",
+      "points": 20
+    },
+    {
+      "id": "q6",
+      "question": "Which festival celebrates the victory of light over darkness?",
+      "options": ["Holi", "Navratri", "Diwali", "Raksha Bandhan"],
+      "correctIndex": 2,
+      "explanation": "Diwali, the festival of lights, symbolizes the triumph of light over darkness and good over evil.",
+      "category": "Festivals",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": "q7",
+      "question": "Who is the elephant-headed god, revered as the remover of obstacles?",
+      "options": ["Kartikeya", "Ganesha", "Hanuman", "Indra"],
+      "correctIndex": 1,
+      "explanation": "Lord Ganesha, son of Shiva and Parvati, is worshipped first before any new venture as the remover of obstacles.",
+      "category": "Deities",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": "q8",
+      "question": "The word 'Namaste' is most closely associated with which gesture?",
+      "options": ["Bowing the head only", "Joining both palms together", "Touching the feet", "Folding the arms"],
+      "correctIndex": 1,
+      "explanation": "Namaste is traditionally offered by pressing the palms together in front of the chest, often with a slight bow.",
+      "category": "Traditions",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": "q9",
+      "question": "Which epic narrates the story of Prince Rama's exile and his quest to rescue Sita?",
+      "options": ["Mahabharata", "Ramayana", "Puranas", "Upanishads"],
+      "correctIndex": 1,
+      "explanation": "The Ramayana follows Rama's fourteen-year exile and the rescue of his wife Sita from Ravana.",
+      "category": "Scriptures",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "id": "q10",
+      "question": "What is the literal meaning of the Sanskrit word 'Namaskar'?",
+      "options": ["I salute you", "I greet the divine in you", "I welcome you", "I honor the divine in you"],
+      "correctIndex": 3,
+      "explanation": "Namaskar breaks down to 'namas' (bow/honor) and 'kar' (to do), commonly understood as honoring the divine within another.",
+      "category": "Philosophy",
+      "difficulty": "hard",
+      "points": 20
+    },
+    {
+      "id": "q11",
+      "question": "Which of the four Vedas is considered the oldest?",
+      "options": ["Rigveda", "Yajurveda", "Samaveda", "Atharvaveda"],
+      "correctIndex": 0,
+      "explanation": "The Rigveda, a collection of hymns, is widely regarded as the oldest of the four Vedas.",
+      "category": "Scriptures",
+      "difficulty": "hard",
+      "points": 20
+    },
+    {
+      "id": "q12",
+      "question": "During which festival do people apply colored powders and water to one another?",
+      "options": ["Diwali", "Holi", "Onam", "Pongal"],
+      "correctIndex": 1,
+      "explanation": "Holi, the festival of colors, celebrates the arrival of spring and the triumph of good over evil.",
+      "category": "Festivals",
+      "difficulty": "easy",
+      "points": 10
+    }
+  ],
+  "round3": [
+    {
+      "id": "b1",
+      "audioUrl": "",
+      "bhajanName": "Raghupati Raghav Raja Ram",
+      "singer": "Traditional",
+      "hint": "A favorite bhajan of Mahatma Gandhi",
+      "points": 15
+    },
+    {
+      "id": "b2",
+      "audioUrl": "",
+      "bhajanName": "Om Jai Jagdish Hare",
+      "singer": "Traditional Aarti",
+      "hint": "Commonly sung during evening aarti",
+      "points": 15
+    },
+    {
+      "id": "b3",
+      "audioUrl": "",
+      "bhajanName": "Vaishnav Jan To",
+      "singer": "Narsinh Mehta",
+      "hint": "Describes the qualities of a true devotee",
+      "points": 15
+    },
+    {
+      "id": "b4",
+      "audioUrl": "",
+      "bhajanName": "Jai Ganesh Jai Ganesh Deva",
+      "singer": "Traditional Aarti",
+      "hint": "An aarti dedicated to the remover of obstacles",
+      "points": 15
+    },
+    {
+      "id": "b5",
+      "audioUrl": "",
+      "bhajanName": "Hare Krishna Hare Krishna",
+      "singer": "Traditional",
+      "hint": "The Maha Mantra, chanted for Krishna consciousness",
+      "points": 15
+    },
+    {
+      "id": "b6",
+      "audioUrl": "",
+      "bhajanName": "Achyutam Keshavam",
+      "singer": "Traditional",
+      "hint": "Praises many names of Lord Krishna in sequence",
+      "points": 15
+    },
+    {
+      "id": "b7",
+      "audioUrl": "",
+      "bhajanName": "Shri Ramchandra Kripalu Bhajman",
+      "singer": "Goswami Tulsidas",
+      "hint": "Written by the author of the Ramcharitmanas",
+      "points": 15
+    },
+    {
+      "id": "b8",
+      "audioUrl": "",
+      "bhajanName": "Om Namah Shivaya",
+      "singer": "Traditional Chant",
+      "hint": "A five-syllable mantra dedicated to Lord Shiva",
+      "points": 15
+    },
+    {
+      "id": "b9",
+      "audioUrl": "",
+      "bhajanName": "Jai Ambe Gauri",
+      "singer": "Traditional Aarti",
+      "hint": "An aarti dedicated to Goddess Durga",
+      "points": 15
+    },
+    {
+      "id": "b10",
+      "audioUrl": "",
+      "bhajanName": "Tu Pyaar Ka Sagar Hai",
+      "singer": "Traditional Bhajan",
+      "hint": "Describes God as an ocean of love",
+      "points": 15
+    },
+    {
+      "id": "b11",
+      "audioUrl": "",
+      "bhajanName": "Man Tarpat Hari Darshan Ko Aaj",
+      "singer": "Traditional",
+      "hint": "Expresses deep longing for a glimpse of the Lord",
+      "points": 15
+    },
+    {
+      "id": "b12",
+      "audioUrl": "",
+      "bhajanName": "Payoji Maine Ram Ratan Dhan Payo",
+      "singer": "Meera Bai",
+      "hint": "Composed by a saint-poetess devoted to Krishna",
+      "points": 15
+    }
+  ],
+  "round4": [
+    { "id": "t1", "label": "Bhakti Yoga", "color": "#FF6B1A" },
+    { "id": "t2", "label": "Karma & Rebirth", "color": "#FFA733" },
+    { "id": "t3", "label": "Festivals of India", "color": "#D4A94A" },
+    { "id": "t4", "label": "Temple Architecture", "color": "#E85400" },
+    { "id": "t5", "label": "Arrival Topic", "isArrivalTopic": true, "color": "#883200" },
+    { "id": "t6", "label": "Saints & Sages", "color": "#FF8940" },
+    { "id": "t7", "label": "Sacred Scriptures", "color": "#B84300" },
+    { "id": "t8", "label": "Meditation & Mindfulness", "color": "#FFC599" }
+  ]
+}
