@@ -49,14 +49,22 @@ export default function Round4Wheel() {
     sfx.spinStart();
     spinWheelStart();
     const winnerIndex = Math.floor(Math.random() * topics.length);
+    // The pointer is at the top (12 o'clock position = -90deg in standard math)
+    // For a conic gradient, the segments start at 0deg (3 o'clock) and go clockwise
+    // To align a segment with the top pointer, we need it to be at -90deg (or 270deg)
     const targetSegmentCenter = winnerIndex * segAngle + segAngle / 2;
-    // spin so that the winning segment lands under the top pointer (0deg).
-    // Account for the wheel's current visual angle (rotation mod 360) so that
-    // each spin lands correctly, not just the first one.
+    // We want the center of the winning segment to align with the top pointer
+    // Top pointer is at -90deg, so we need: (360 - targetSegmentCenter + offset) % 360 = 90
+    // Actually, the rotation is applied clockwise, so to bring a segment to top:
+    // The segment at angle θ should be rotated by (270 - θ) degrees to reach top
     const fullSpins = 5 + Math.floor(Math.random() * 3);
+    // The current visual angle of the wheel
     const currentVisualAngle = ((rotation % 360) + 360) % 360;
-    const desiredVisualAngle = (360 - targetSegmentCenter) % 360;
-    let delta = desiredVisualAngle - currentVisualAngle;
+    // We want the target segment center to be at the top (270deg in our rotation space)
+    // Because the wheel rotates clockwise, to bring segment at angle θ to top:
+    // We need rotation = 270 - θ (plus full spins for momentum)
+    const targetRotation = (270 - targetSegmentCenter + 360) % 360;
+    let delta = targetRotation - currentVisualAngle;
     if (delta <= 0) delta += 360;
     const finalRotation = rotation + fullSpins * 360 + delta;
     setRotation(finalRotation);

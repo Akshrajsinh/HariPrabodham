@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { Maximize, Minimize, HelpCircle, Flame } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import ShortcutsOverlay from './ShortcutsOverlay';
+import RoundRulesModal from './RoundRulesModal';
 import OmSymbol from './OmSymbol';
 import { sfx } from '../utils/sound';
 import type { RoundKey } from '../types';
+
+type PlayableRound = 'round1' | 'round2' | 'round3' | 'round4';
+const playableRounds: PlayableRound[] = ['round1', 'round2', 'round3', 'round4'];
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -29,10 +33,16 @@ export default function TopBar() {
   const goToRound = useGameStore((s) => s.goToRound);
   const [showHelp, setShowHelp] = useState(false);
   const [isFs, setIsFs] = useState(!!document.fullscreenElement);
+  const [pendingRound, setPendingRound] = useState<PlayableRound | null>(null);
 
   document.onfullscreenchange = () => setIsFs(!!document.fullscreenElement);
 
   const navigate = (id: RoundKey) => {
+    if (playableRounds.includes(id as PlayableRound)) {
+      sfx.click();
+      setPendingRound(id as PlayableRound);
+      return;
+    }
     sfx.navigate();
     goToRound(id);
   };
@@ -84,6 +94,17 @@ export default function TopBar() {
         </div>
       </div>
       {showHelp && <ShortcutsOverlay onClose={() => setShowHelp(false)} />}
+      {pendingRound && (
+        <RoundRulesModal
+          round={pendingRound}
+          onStart={() => {
+            sfx.navigate();
+            goToRound(pendingRound);
+            setPendingRound(null);
+          }}
+          onClose={() => setPendingRound(null)}
+        />
+      )}
     </>
   );
 }

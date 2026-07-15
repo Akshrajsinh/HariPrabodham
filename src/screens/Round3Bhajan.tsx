@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Pause, RotateCcw, Eye, ChevronRight, Music4, Upload, Award } from 'lucide-react';
+import { Play, Pause, RotateCcw, Eye, ChevronRight, Music4, Upload, Award, Trophy } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
@@ -10,7 +10,7 @@ import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
 
 export default function Round3Bhajan() {
-  const { bank, r3Index, r3Revealed, nextR3, revealR3, teams, awardPoints } = useGameStore();
+  const { bank, r3Index, r3Revealed, nextR3, revealR3, goToRound, teams, awardPoints } = useGameStore();
   const track = bank.round3[r3Index];
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -53,7 +53,11 @@ export default function Round3Bhajan() {
     usePresenterActions.getState().register({
       onNext: () => {
         sfx.navigate();
-        nextR3();
+        if (r3Index >= bank.round3.length - 1) {
+          goToRound('scoreboard');
+        } else {
+          nextR3();
+        }
       },
       onReveal: () => {
         if (!r3Revealed) {
@@ -212,6 +216,17 @@ export default function Round3Bhajan() {
                 >
                   Next Tune <ChevronRight size={18} />
                 </button>
+                {r3Index >= bank.round3.length - 1 && (
+                  <button
+                    onClick={() => {
+                      sfx.navigate();
+                      goToRound('scoreboard');
+                    }}
+                    className="btn-primary flex items-center gap-1.5"
+                  >
+                    <Trophy size={18} /> Finish Round · View Scoreboard
+                  </button>
+                )}
               </>
             )}
           </GlassCard>

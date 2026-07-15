@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Eye, Upload, Award, ImageIcon, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Upload, Award, ImageIcon, Plus, X, Trophy } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
@@ -20,63 +20,75 @@ const emptyDraft = (): ImageQuestion => ({
 });
 
 export default function Round1Picture() {
-  const { bank, setBank, r1Index, r1Revealed, nextR1, prevR1, revealR1, goToR1, teams, awardPoints } =
+  const { bank, setBank, r1Index, r1Revealed, nextR1, prevR1, revealR1, goToR1, goToRound, teams, awardPoints } =
     useGameStore();
   const question = bank.round1[r1Index];
+  const { secondsLeft, running, start, reset } = useCountdown(30);
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(bank.round1.length === 0);
   const [draft, setDraft] = useState<ImageQuestion>(emptyDraft());
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-const TIMER_SECONDS = 30;
+  const timerStartedRef = useRef(false);
 
-const {
-  secondsLeft,
-  running,
-  start,
-  pause,
-  reset,
-} = useCountdown(TIMER_SECONDS);
+  // Reset timer and start it automatically when question changes
+  useEffect(() => {
+    reset(30);
+    setAwardedTeam(null);
+    timerStartedRef.current = false;
+    // Start timer automatically when question loads and is not revealed yet
+    if (!r1Revealed) {
+      start();
+      timerStartedRef.current = true;
+    }
+  }, [r1Index]);
 
-
-useEffect(() => {
-  reset(TIMER_SECONDS);
-  setAwardedTeam(null);
-
-  // Small delay ensures reset completes before starting
-  const id = window.setTimeout(() => {
-    start();
-  }, 100);
-
-  return () => clearTimeout(id);
-}, [r1Index]);
+  // Start timer when question is revealed
+  useEffect(() => {
+    if (r1Revealed && !timerStartedRef.current) {
+      start();
+      timerStartedRef.current = true;
+    }
+  }, [r1Revealed]);
 
   useEffect(() => {
     if (bank.round1.length === 0) setShowAddForm(true);
   }, [bank.round1.length]);
 
-const reveal = () => {
-  if (!question || r1Revealed) return;
-
-  pause();          // Stop timer immediately
-  revealR1();
-  sfx.reveal();
-  fireMarigoldBurst();
-};
+  const reveal = () => {
+    if (!question || r1Revealed) return;
+    revealR1();
+    sfx.reveal();
+    fireMarigoldBurst();
+    // Start timer when reveal is clicked
+    if (!timerStartedRef.current) {
+      start();
+      timerStartedRef.current = true;
+    }
+  };
 
   useEffect(() => {
     usePresenterActions.getState().register({
       onNext: () => {
         sfx.navigate();
-        nextR1();
+        if (r1Revealed && r1Index >= bank.round1.length - 1) {
+          goToRound('scoreboard');
+        } else {
+          nextR1();
+        }
       },
       onPrev: () => {
         sfx.navigate();
         prevR1();
       },
       onReveal: reveal,
-      onStartTimer: () => start(),
+      onStartTimer: () => {
+        if (!timerStartedRef.current) {
+          start();
+          timerStartedRef.current = true;
+        }
+      },
     });
     return () => usePresenterActions.getState().clear();
   }, [r1Index, r1Revealed, question]);
@@ -307,12 +319,23 @@ const reveal = () => {
                     <ChevronLeft size={18} /> Previous
                   </button>
                   {r1Index >= bank.round1.length - 1 ? (
-                    <button
-                      onClick={() => setShowAddForm(true)}
-                      className="btn-primary flex items-center gap-1.5"
-                    >
-                      <Plus size={18} /> Add Next Question
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          sfx.navigate();
+                          goToRound('scoreboard');
+                        }}
+                        className="btn-primary flex items-center gap-1.5"
+                      >
+                        <Trophy size={18} /> Finish Round · View Scoreboard
+                      </button>
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="btn-secondary flex items-center gap-1.5"
+                      >
+                        <Plus size={18} /> Add Question
+                      </button>
+                    </>
                   ) : (
                     <button
                       onClick={() => {

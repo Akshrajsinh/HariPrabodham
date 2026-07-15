@@ -4,9 +4,13 @@ import { useGameStore } from '../store/useGameStore';
 import GlassCard from '../components/GlassCard';
 import MandalaRing from '../components/MandalaRing';
 import OmSymbol from '../components/OmSymbol';
+import RoundRulesModal from '../components/RoundRulesModal';
 import { sfx } from '../utils/sound';
 import { useState } from 'react';
 import QuestionManager from './QuestionManager';
+import type { RoundKey } from '../types';
+
+type PlayableRound = 'round1' | 'round2' | 'round3' | 'round4';
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -20,8 +24,26 @@ export default function Dashboard() {
   const { eventName, subtitle, eventStarted, currentRound, teams, startEvent, goToRound, resetGame } =
     useGameStore();
   const [showManager, setShowManager] = useState(false);
+  const [pending, setPending] = useState<{ round: PlayableRound; kind: 'start' | 'nav' } | null>(null);
 
   const topTeam = [...teams].sort((a, b) => b.totalScore - a.totalScore)[0];
+
+  const requestRound = (round: PlayableRound, kind: 'start' | 'nav') => {
+    sfx.click();
+    setPending({ round, kind });
+  };
+
+  const confirmPending = () => {
+    if (!pending) return;
+    if (pending.kind === 'start') {
+      sfx.fanfare();
+      startEvent();
+    } else {
+      sfx.navigate();
+      goToRound(pending.round);
+    }
+    setPending(null);
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-24 overflow-hidden">
@@ -72,10 +94,7 @@ export default function Dashboard() {
       <GlassCard arch className="relative z-10 w-full max-w-lg p-8 flex flex-col items-center gap-4" delay={0.3}>
         {!eventStarted ? (
           <button
-            onClick={() => {
-              sfx.fanfare();
-              startEvent();
-            }}
+            onClick={() => requestRound('round1', 'start')}
             className="btn-primary w-full flex items-center justify-center gap-2 text-lg"
           >
             <Play size={20} fill="currentColor" /> Start Event
@@ -83,8 +102,13 @@ export default function Dashboard() {
         ) : (
           <button
             onClick={() => {
-              sfx.click();
-              goToRound(currentRound === 'dashboard' ? 'round1' : currentRound);
+              const target = currentRound === 'dashboard' ? 'round1' : currentRound;
+              if (target === 'round1' || target === 'round2' || target === 'round3' || target === 'round4') {
+                requestRound(target, 'nav');
+              } else {
+                sfx.click();
+                goToRound(target as RoundKey);
+              }
             }}
             className="btn-primary w-full flex items-center justify-center gap-2 text-lg"
           >
@@ -131,10 +155,7 @@ export default function Dashboard() {
         {(['round1', 'round2', 'round3', 'round4'] as const).map((r, i) => (
           <button
             key={r}
-            onClick={() => {
-              sfx.navigate();
-              goToRound(r);
-            }}
+            onClick={() => requestRound(r, 'nav')}
             className="px-4 py-2 rounded-full glass text-xs font-score text-cream/70 hover:text-marigold hover:scale-105 transition-all"
           >
             Round {i + 1}
@@ -143,6 +164,9 @@ export default function Dashboard() {
       </div>
 
       {showManager && <QuestionManager onClose={() => setShowManager(false)} />}
+      {pending && (
+        <RoundRulesModal round={pending.round} onStart={confirmPending} onClose={() => setPending(null)} />
+      )}
     </div>
   );
 }

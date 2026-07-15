@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Play, Pause, RefreshCcw, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, RefreshCcw, CheckCircle2, XCircle, Trophy } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
@@ -14,7 +14,7 @@ const CORRECT_POINTS = 10;
 const WRONG_POINTS = 0;
 
 export default function Round2MCQ() {
-  const { bank, r2Index, r2TimerDuration, nextR2, prevR2, setR2TimerDuration, teams, awardPoints } =
+  const { bank, r2Index, r2TimerDuration, nextR2, prevR2, setR2TimerDuration, goToRound, teams, awardPoints } =
     useGameStore();
   const question = bank.round2[r2Index];
   const { secondsLeft, running, start, pause, reset } = useCountdown(r2TimerDuration);
@@ -49,7 +49,11 @@ export default function Round2MCQ() {
     usePresenterActions.getState().register({
       onNext: () => {
         sfx.navigate();
-        nextR2();
+        if (r2Index >= bank.round2.length - 1) {
+          goToRound('scoreboard');
+        } else {
+          nextR2();
+        }
       },
       onPrev: () => {
         sfx.navigate();
@@ -259,6 +263,17 @@ export default function Round2MCQ() {
         >
           Next Question <ChevronRight size={18} />
         </button>
+        {r2Index >= bank.round2.length - 1 && (
+          <button
+            onClick={() => {
+              sfx.navigate();
+              goToRound('scoreboard');
+            }}
+            className="btn-primary flex items-center gap-1.5"
+          >
+            <Trophy size={18} /> Finish Round · View Scoreboard
+          </button>
+        )}
       </div>
     </div>
   );
