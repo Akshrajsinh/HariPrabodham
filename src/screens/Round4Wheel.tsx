@@ -11,13 +11,14 @@ import { sfx } from '../utils/sound';
 const WHEEL_SIZE = 380;
 
 export default function Round4Wheel() {
-  const { bank, r4SelectedTopicId, r4Spinning, spinWheelStart, spinWheelStop, forceStopSpin, goToRound, teams, awardPoints } =
-    useGameStore();
+  const { bank, r4SelectedTopicId, r4Spinning, spinWheelStart, spinWheelStop, forceStopSpin, goToRound, teams, awardPoints, removeTopic } =
+    useGameStore(); // Add removeTopic from store
   const topics = bank.round4;
   const [rotation, setRotation] = useState(0);
   const spinTimeout = useRef<number | null>(null);
   const { secondsLeft, running, start, pause, reset } = useCountdown(120);
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false); // Prevent multiple removals
 
   // A fresh page load can never have a real spin animation in flight — if the
   // "spinning" flag is somehow still true (e.g. an old cached build, or a
@@ -37,9 +38,32 @@ export default function Round4Wheel() {
 
   useEffect(() => {
     setAwardedTeam(null);
+    setIsRemoving(false); // Reset removal flag when new topic is selected
   }, [r4SelectedTopicId]);
 
+  // Auto-remove arrival topic when timer reaches 0
+  useEffect(() => {
+    if (isArrival && secondsLeft === 0 && !r4Spinning && selected && !isRemoving) {
+      setIsRemoving(true);
+      
+      // Play a sound effect if available
+      if (sfx.navigate) sfx.navigate();
+      
+      // Remove the topic from the wheel after a short delay
+      const timer = setTimeout(() => {
+        removeTopic(selected.id, 'round4'); // Remove from round4 topics
+        // Reset timer for next spin
+        reset(120);
+        // The selected topic will be cleared by the store
+        setIsRemoving(false);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [secondsLeft, isArrival, r4Spinning, selected, removeTopic, reset, isRemoving]);
+
   const conicGradient = useMemo(() => {
+    if (topics.length === 0) return 'conic-gradient(#FF6B1A 0deg 360deg)';
     const stops = topics.map((t, i) => `${t.color ?? '#FF6B1A'} ${i * segAngle}deg ${(i + 1) * segAngle}deg`);
     return `conic-gradient(${stops.join(', ')})`;
   }, [topics, segAngle]);
@@ -88,6 +112,36 @@ export default function Round4Wheel() {
     });
     return () => usePresenterActions.getState().clear();
   }, [rotation, r4Spinning, topics]);
+
+  // Show message when all topics are removed
+  if (topics.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+        <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
+          <span className="brass-divider w-8" />
+          Round 4 · Spin Wheel Challenge
+          <span className="brass-divider w-8" />
+        </div>
+        <GlassCard arch glow="saffron" className="p-12 text-center max-w-lg">
+          <h2 className="font-display text-3xl text-gradient-saffron font-bold mb-4">
+            All Topics Completed! 🎉
+          </h2>
+          <p className="text-cream/80 mb-6">
+            All arrival topics have been presented. Ready to see the scores?
+          </p>
+          <button
+            onClick={() => {
+              sfx.navigate();
+              goToRound('scoreboard');
+            }}
+            className="btn-primary flex items-center gap-2 mx-auto"
+          >
+            <Trophy size={18} /> View Scoreboard
+          </button>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
@@ -151,10 +205,11 @@ export default function Round4Wheel() {
       </button>
 
       <AnimatePresence>
-        {selected && !r4Spinning && (
+        {selected && !r4Spinning && !isRemoving && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
             className="w-full max-w-lg"
           >
             <GlassCard arch glow="saffron" className="p-8 text-center">
@@ -218,4 +273,3 @@ export default function Round4Wheel() {
     </div>
   );
 }
-
