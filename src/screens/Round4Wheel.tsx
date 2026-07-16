@@ -18,6 +18,7 @@ export default function Round4Wheel() {
   const spinTimeout = useRef<number | null>(null);
   const { secondsLeft, running, start, pause, reset } = useCountdown(120);
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
+  const [showTopic, setShowTopic] = useState(true); // New state to control topic visibility
 
   // A fresh page load can never have a real spin animation in flight — if the
   // "spinning" flag is somehow still true (e.g. an old cached build, or a
@@ -35,9 +36,26 @@ export default function Round4Wheel() {
   const selected = topics.find((t) => t.id === r4SelectedTopicId);
   const isArrival = selected?.isArrivalTopic;
 
+  // Reset visibility and awarded team when new topic is selected
   useEffect(() => {
     setAwardedTeam(null);
+    setShowTopic(true); // Show the topic when a new one is selected
   }, [r4SelectedTopicId]);
+
+  // Auto-remove topic when timer reaches 0 for arrival topics
+  useEffect(() => {
+    if (isArrival && secondsLeft === 0 && !r4Spinning && showTopic) {
+      // Play a sound effect if needed
+      sfx.navigate?.();
+      // Hide the topic after a short delay to let the user see it hit 0
+      const timer = setTimeout(() => {
+        setShowTopic(false);
+        // Optionally reset the timer for next spin
+        reset(120);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [secondsLeft, isArrival, r4Spinning, showTopic, reset]);
 
   const conicGradient = useMemo(() => {
     const stops = topics.map((t, i) => `${t.color ?? '#FF6B1A'} ${i * segAngle}deg ${(i + 1) * segAngle}deg`);
@@ -151,10 +169,11 @@ export default function Round4Wheel() {
       </button>
 
       <AnimatePresence>
-        {selected && !r4Spinning && (
+        {selected && !r4Spinning && showTopic && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }} // Exit animation
             className="w-full max-w-lg"
           >
             <GlassCard arch glow="saffron" className="p-8 text-center">
