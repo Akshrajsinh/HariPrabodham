@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import defaultBank from '../data/questionBank.json';
 import defaultTeams from '../data/teams.json';
 import { indexedDbStorage } from './indexedDbStorage';
-import type { Team, RoundKey, QuestionBank } from '../types';
+import type { Team, RoundKey, QuestionBank, BuzzerEntry, CompletedQuestions } from '../types';
 
 interface GameState {
   eventName: string;
@@ -25,6 +25,13 @@ interface GameState {
   // Round 3 progress — Bhajan Tune challenge
   r3Index: number;
   r3Revealed: boolean;
+
+  // Buzzer system state
+  buzzerQueue: BuzzerEntry[];
+  buzzersLocked: boolean;
+
+  // Check mark module — Completed questions tracker per round
+  completedQuestions: CompletedQuestions;
 
   // Round 4 progress — Spin Wheel challenge
   r4SelectedTopicId: string | null;
@@ -51,16 +58,27 @@ interface GameState {
 
   nextR2: () => void;
   prevR2: () => void;
+  goToR2: (index: number) => void;
   setR2TimerDuration: (d: 30 | 45 | 60) => void;
 
   nextR3: () => void;
+  prevR3: () => void;
+  goToR3: (index: number) => void;
   revealR3: () => void;
+
+  // Buzzer actions
+  registerBuzzer: (teamId: string, customTeamName?: string) => { success: boolean; rank?: number };
+  resetBuzzers: () => void;
+  setBuzzerLock: (locked: boolean) => void;
+
+  // Check Mark actions
+  toggleQuestionCompleted: (round: keyof CompletedQuestions, questionId: string) => void;
+  markQuestionCompleted: (round: keyof CompletedQuestions, questionId: string) => void;
 
   spinWheelStart: () => void;
   spinWheelStop: (topicId: string) => void;
   forceStopSpin: () => void;
 
-  // ADD THIS NEW ACTION
   removeRound4Topic: (topicId: string) => void;
 
   startTimer: (seconds: number) => void;
@@ -79,9 +97,16 @@ const initialTeams: Team[] = (defaultTeams as any[]).map((t) => ({
   roundScores: { round1: 0, round2: 0, round3: 0, round4: 0 },
 }));
 
+const initialCompleted: CompletedQuestions = {
+  round1: [],
+  round2: [],
+  round3: [],
+  round4: [],
+};
+
 export const useGameStore = create<GameState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       eventName: 'Gyan Challenge',
       subtitle: 'A Spiritual Quiz Celebration',
       currentRound: 'dashboard',
@@ -98,6 +123,11 @@ export const useGameStore = create<GameState>()(
 
       r3Index: 0,
       r3Revealed: false,
+
+      buzzerQueue: [],
+      buzzersLocked: false,
+
+      completedQuestions: initialCompleted,
 
       r4SelectedTopicId: null,
       r4Spinning: false,
@@ -151,20 +181,97 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           r2Index: Math.max(state.r2Index - 1, 0),
         })),
+      goToR2: (index) =>
+        set((state) => ({
+          r2Index: Math.max(0, Math.min(index, Math.max(state.bank.round2.length - 1, 0))),
+        })),
       setR2TimerDuration: (d) => set({ r2TimerDuration: d, timerSecondsLeft: d }),
 
       nextR3: () =>
         set((state) => ({
           r3Index: Math.min(state.r3Index + 1, state.bank.round3.length - 1),
           r3Revealed: false,
+          buzzerQueue: [],
+        })),
+      prevR3: () =>
+        set((state) => ({
+          r3Index: Math.max(state.r3Index - 1, 0),
+          r3Revealed: false,
+          buzzerQueue: [],
+        })),
+      goToR3: (index) =>
+        set((state) => ({
+          r3Index: Math.max(0, Math.min(index, Math.max(state.bank.round3.length - 1, 0))),
+          r3Revealed: false,
+          buzzerQueue: [],
         })),
       revealR3: () => set({ r3Revealed: true }),
+
+      // Buzzer logic
+      registerBuzzer: (teamId, customTeamName) => {
+        const state = get();
+        if (state.buzzersLocked) return { success: false };
+
+        const existingIndex = state.buzzerQueue.findIndex(
+          (b) => b.teamId === teamId || (customTeamName && b.teamName.toLowerCase() === customTeamName.toLowerCase())
+        );
+
+        if (existingIndex !== -1) {
+          return { success: false, rank: state.buzzerQueue[existingIndex].rank };
+        }
+
+        const now = Date.now();
+        const firstTime = state.buzzerQueue.length > 0 ? state.buzzerQueue[0].timestamp : now;
+        const timeDiffMs = now - firstTime;
+        const rank = state.buzzerQueue.length + 1;
+        const teamObj = state.teams.find((t) => t.id === teamId);
+
+        const newEntry: BuzzerEntry = {
+          teamId,
+          teamName: customTeamName || teamObj?.name || teamId,
+          teamColor: teamObj?.color || '#FF6B1A',
+          timestamp: now,
+          timeDiffMs,
+          rank,
+        };
+
+        set({ buzzerQueue: [...state.buzzerQueue, newEntry] });
+        return { success: true, rank };
+      },
+
+      resetBuzzers: () => set({ buzzerQueue: [] }),
+      setBuzzerLock: (locked) => set({ buzzersLocked: locked }),
+
+      // Check mark module logic
+      toggleQuestionCompleted: (round, questionId) =>
+        set((state) => {
+          const currentList = state.completedQuestions[round] || [];
+          const exists = currentList.includes(questionId);
+          const nextList = exists ? currentList.filter((id) => id !== questionId) : [...currentList, questionId];
+          return {
+            completedQuestions: {
+              ...state.completedQuestions,
+              [round]: nextList,
+            },
+          };
+        }),
+
+      markQuestionCompleted: (round, questionId) =>
+        set((state) => {
+          const currentList = state.completedQuestions[round] || [];
+          if (currentList.includes(questionId)) return state;
+          return {
+            completedQuestions: {
+              ...state.completedQuestions,
+              [round]: [...currentList, questionId],
+            },
+          };
+        }),
 
       spinWheelStart: () => set({ r4Spinning: true, r4SelectedTopicId: null }),
       spinWheelStop: (topicId) => set({ r4Spinning: false, r4SelectedTopicId: topicId }),
       forceStopSpin: () => set({ r4Spinning: false }),
 
-      // ADD THIS NEW ACTION IMPLEMENTATION
       removeRound4Topic: (topicId: string) =>
         set((state) => ({
           bank: {
@@ -195,6 +302,9 @@ export const useGameStore = create<GameState>()(
           r2Index: 0,
           r3Index: 0,
           r3Revealed: false,
+          buzzerQueue: [],
+          buzzersLocked: false,
+          completedQuestions: initialCompleted,
           r4SelectedTopicId: null,
           r4Spinning: false,
           timerRunning: false,

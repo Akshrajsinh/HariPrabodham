@@ -50,7 +50,23 @@ export interface Team {
   };
 }
 
-export type RoundKey = 'dashboard' | 'round1' | 'round2' | 'round3' | 'round4' | 'scoreboard';
+export type RoundKey = 'dashboard' | 'round1' | 'round2' | 'round3' | 'round4' | 'scoreboard' | 'buzzer';
+
+export interface BuzzerEntry {
+  teamId: string;
+  teamName: string;
+  teamColor?: string;
+  timestamp: number; // Unix timestamp ms
+  timeDiffMs?: number; // Offset relative to 1st buzzer
+  rank: number;
+}
+
+export interface CompletedQuestions {
+  round1: string[];
+  round2: string[];
+  round3: string[];
+  round4: string[];
+}
 
 export interface EventMeta {
   eventName: string;
@@ -65,3 +81,4 @@ export interface QuestionBank {
   round3: BhajanTrack[];
   round4: WheelTopic[];
 }
+

@@ -9,6 +9,7 @@ import Round2MCQ from './screens/Round2MCQ';
 import Round3Bhajan from './screens/Round3Bhajan';
 import Round4Wheel from './screens/Round4Wheel';
 import Scoreboard from './screens/Scoreboard';
+import MobileBuzzerClient from './screens/MobileBuzzerClient';
 
 const screens = {
   dashboard: Dashboard,
@@ -17,12 +18,23 @@ const screens = {
   round3: Round3Bhajan,
   round4: Round4Wheel,
   scoreboard: Scoreboard,
+  buzzer: MobileBuzzerClient,
 };
 
 function App() {
   useKeyboardShortcuts();
   const currentRound = useGameStore((s) => s.currentRound);
-  const Screen = screens[currentRound];
+
+  // Check if opened via QR code URL with ?mode=buzzer
+  const isBuzzerMode =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('mode') === 'buzzer' || currentRound === 'buzzer');
+
+  if (isBuzzerMode) {
+    return <MobileBuzzerClient />;
+  }
+
+  const Screen = screens[currentRound] || Dashboard;
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
@@ -46,3 +58,4 @@ function App() {
 }
 
 export default App;
+

@@ -11,19 +11,20 @@ import { sfx } from '../utils/sound';
 const WHEEL_SIZE = 380;
 
 export default function Round4Wheel() {
-  const { 
-    bank, 
-    r4SelectedTopicId, 
-    r4Spinning, 
-    spinWheelStart, 
-    spinWheelStop, 
-    forceStopSpin, 
-    goToRound, 
-    teams, 
+  const {
+    bank,
+    r4SelectedTopicId,
+    r4Spinning,
+    spinWheelStart,
+    spinWheelStop,
+    forceStopSpin,
+    goToRound,
+    teams,
     awardPoints,
-    removeRound4Topic // Make sure this is defined in your store
+    removeRound4Topic,
+    markQuestionCompleted,
   } = useGameStore();
-  
+
   const topics = bank.round4;
   const [rotation, setRotation] = useState(0);
   const spinTimeout = useRef<number | null>(null);
@@ -31,10 +32,6 @@ export default function Round4Wheel() {
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
   const [completedTopics, setCompletedTopics] = useState<string[]>([]);
 
-  // A fresh page load can never have a real spin animation in flight — if the
-  // "spinning" flag is somehow still true (e.g. an old cached build, or a
-  // refresh that happened mid-spin before this fix), clear it so the wheel
-  // never gets permanently stuck.
   useEffect(() => {
     if (r4Spinning) forceStopSpin();
     return () => {
@@ -43,7 +40,7 @@ export default function Round4Wheel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const segAngle = 360 / topics.length;
+  const segAngle = 360 / (topics.length || 1);
   const selected = topics.find((t) => t.id === r4SelectedTopicId);
   const isArrival = selected?.isArrivalTopic;
 
@@ -52,20 +49,18 @@ export default function Round4Wheel() {
   }, [r4SelectedTopicId]);
 
   const conicGradient = useMemo(() => {
+    if (topics.length === 0) return 'none';
     const stops = topics.map((t, i) => `${t.color ?? '#FF6B1A'} ${i * segAngle}deg ${(i + 1) * segAngle}deg`);
     return `conic-gradient(${stops.join(', ')})`;
   }, [topics, segAngle]);
 
   const spin = () => {
     if (r4Spinning || topics.length === 0) return;
-    
+
     sfx.spinStart();
     spinWheelStart();
     const winnerIndex = Math.floor(Math.random() * topics.length);
     const targetSegmentCenter = winnerIndex * segAngle + segAngle / 2;
-    // spin so that the winning segment lands under the top pointer (0deg).
-    // Account for the wheel's current visual angle (rotation mod 360) so that
-    // each spin lands correctly, not just the first one.
     const fullSpins = 5 + Math.floor(Math.random() * 3);
     const currentVisualAngle = ((rotation % 360) + 360) % 360;
     const desiredVisualAngle = (360 - targetSegmentCenter) % 360;
@@ -73,18 +68,18 @@ export default function Round4Wheel() {
     if (delta <= 0) delta += 360;
     const finalRotation = rotation + fullSpins * 360 + delta;
     setRotation(finalRotation);
-    
+
     if (spinTimeout.current) window.clearTimeout(spinTimeout.current);
     spinTimeout.current = window.setTimeout(() => {
       sfx.spinStop();
       const selectedTopic = topics[winnerIndex];
       spinWheelStop(selectedTopic.id);
+      markQuestionCompleted('round4', selectedTopic.id);
       reset(120);
-      
-      // Remove the topic after it's been selected/presented
+
       if (selectedTopic.isArrivalTopic) {
         removeRound4Topic(selectedTopic.id);
-        setCompletedTopics(prev => [...prev, selectedTopic.id]);
+        setCompletedTopics((prev) => [...prev, selectedTopic.id]);
       }
     }, 4200);
   };
@@ -102,7 +97,6 @@ export default function Round4Wheel() {
     return () => usePresenterActions.getState().clear();
   }, [rotation, r4Spinning, topics, spin, start, pause, goToRound]);
 
-  // Show completion screen when all topics are done
   if (topics.length === 0 && completedTopics.length > 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
@@ -111,7 +105,7 @@ export default function Round4Wheel() {
           Round 4 · Complete!
           <span className="brass-divider w-8" />
         </div>
-        
+
         <GlassCard arch glow="saffron" className="p-8 text-center max-w-lg">
           <div className="flex justify-center mb-4">
             <div className="h-20 w-20 rounded-full bg-emerald/20 flex items-center justify-center">
@@ -124,9 +118,7 @@ export default function Round4Wheel() {
           <p className="text-cream/70 mb-2">
             You've successfully completed all {completedTopics.length} Round 4 topics!
           </p>
-          <p className="text-cream/50 text-sm mb-6">
-            Great job presenting all the arrival topics.
-          </p>
+          <p className="text-cream/50 text-sm mb-6">Great job presenting all the arrival topics.</p>
           <button
             onClick={() => {
               sfx.navigate();
@@ -149,13 +141,12 @@ export default function Round4Wheel() {
         <span className="brass-divider w-8" />
       </div>
 
-      {/* Show remaining topics counter */}
-      <div className="text-sm text-cream/50">
-        {topics.length} topic{topics.length !== 1 ? 's' : ''} remaining
+      <div className="text-sm font-score text-cream/60 flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-emerald inline-block" />
+        {topics.length} topic{topics.length !== 1 ? 's' : ''} remaining · {completedTopics.length} completed ✓
       </div>
 
       <div className="relative" style={{ width: WHEEL_SIZE, height: WHEEL_SIZE }}>
-        {/* pointer */}
         <div
           className="absolute left-1/2 -translate-x-1/2 -top-3 z-10"
           style={{
@@ -218,11 +209,7 @@ export default function Round4Wheel() {
               <p className="text-xs uppercase tracking-widest text-cream/40 mb-2">Selected Topic</p>
               <h2 className="font-display text-3xl text-gradient-saffron font-bold mb-4">{selected.label}</h2>
 
-              {isArrival && (
-                <p className="font-body text-cream/80 mb-4">
-                  You have 2 minutes to present on this topic.
-                </p>
-              )}
+              {isArrival && <p className="font-body text-cream/80 mb-4">You have 2 minutes to present on this topic.</p>}
 
               <div className="flex flex-col items-center gap-4">
                 <DiyaTimer secondsLeft={secondsLeft} totalSeconds={120} running={running} size={140} />
@@ -246,6 +233,7 @@ export default function Round4Wheel() {
                       key={t.id}
                       onClick={() => {
                         awardPoints(t.id, 'round4', 20);
+                        if (selected) markQuestionCompleted('round4', selected.id);
                         setAwardedTeam(t.id);
                         sfx.correct();
                       }}
@@ -263,7 +251,6 @@ export default function Round4Wheel() {
                 <button
                   onClick={() => {
                     sfx.navigate();
-                    // Spin again without going to scoreboard
                     spin();
                   }}
                   className="btn-secondary flex items-center gap-2"

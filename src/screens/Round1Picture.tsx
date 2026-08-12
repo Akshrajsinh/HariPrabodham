@@ -6,6 +6,7 @@ import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
 import GlassCard from '../components/GlassCard';
 import DiyaTimer from '../components/DiyaTimer';
+import QuestionStepperBar from '../components/QuestionStepperBar';
 import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
 import { compressImageToDataUrl } from '../utils/image';
@@ -20,8 +21,21 @@ const emptyDraft = (): ImageQuestion => ({
 });
 
 export default function Round1Picture() {
-  const { bank, setBank, r1Index, r1Revealed, nextR1, prevR1, revealR1, goToR1, goToRound, teams, awardPoints } =
-    useGameStore();
+  const {
+    bank,
+    setBank,
+    r1Index,
+    r1Revealed,
+    nextR1,
+    prevR1,
+    revealR1,
+    goToR1,
+    goToRound,
+    teams,
+    awardPoints,
+    markQuestionCompleted,
+  } = useGameStore();
+
   const question = bank.round1[r1Index];
   const { secondsLeft, running, start, reset } = useCountdown(30);
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
@@ -59,6 +73,7 @@ export default function Round1Picture() {
   const reveal = () => {
     if (!question || r1Revealed) return;
     revealR1();
+    markQuestionCompleted('round1', question.id);
     sfx.reveal();
     fireMarigoldBurst();
     // Start timer when reveal is clicked
@@ -234,15 +249,21 @@ export default function Round1Picture() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20 gap-6">
       <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
         <span className="brass-divider w-8" />
         Round 1 · Picture Question
         <span className="brass-divider w-8" />
-        <span className="text-cream/40">
-          {r1Index + 1} / {bank.round1.length}
-        </span>
       </div>
+
+      {/* Check Mark Navigation Stepper */}
+      <QuestionStepperBar
+        round="round1"
+        currentIndex={r1Index}
+        totalQuestions={bank.round1.length}
+        onSelectIndex={(i) => goToR1(i)}
+        questionIds={bank.round1.map((q) => q.id)}
+      />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -250,7 +271,7 @@ export default function Round1Picture() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className="w-full max-w-xl"
         >
           <GlassCard arch glow="saffron" className="p-8 flex flex-col items-center gap-5">
@@ -295,6 +316,7 @@ export default function Round1Picture() {
                         key={t.id}
                         onClick={() => {
                           awardPoints(t.id, 'round1', question.points ?? 15);
+                          markQuestionCompleted('round1', question.id);
                           setAwardedTeam(t.id);
                           sfx.correct();
                         }}

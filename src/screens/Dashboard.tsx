@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { Play, RotateCcw, Maximize, Settings2, Users } from 'lucide-react';
+import { Play, RotateCcw, Maximize, Settings2, Users, QrCode, CheckCircle2 } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import GlassCard from '../components/GlassCard';
 import MandalaRing from '../components/MandalaRing';
 import OmSymbol from '../components/OmSymbol';
 import RoundRulesModal from '../components/RoundRulesModal';
+import QRCodeModal from '../components/QRCodeModal';
 import { sfx } from '../utils/sound';
 import { useState } from 'react';
 import QuestionManager from './QuestionManager';
@@ -21,12 +22,18 @@ function toggleFullscreen() {
 }
 
 export default function Dashboard() {
-  const { eventName, subtitle, eventStarted, currentRound, teams, startEvent, goToRound, resetGame } =
+  const { eventName, subtitle, eventStarted, currentRound, teams, startEvent, goToRound, resetGame, completedQuestions } =
     useGameStore();
   const [showManager, setShowManager] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const [pending, setPending] = useState<{ round: PlayableRound; kind: 'start' | 'nav' } | null>(null);
 
   const topTeam = [...teams].sort((a, b) => b.totalScore - a.totalScore)[0];
+  const totalCompleted =
+    (completedQuestions.round1?.length || 0) +
+    (completedQuestions.round2?.length || 0) +
+    (completedQuestions.round3?.length || 0) +
+    (completedQuestions.round4?.length || 0);
 
   const requestRound = (round: PlayableRound, kind: 'start' | 'nav') => {
     sfx.click();
@@ -87,7 +94,8 @@ export default function Dashboard() {
       {topTeam && topTeam.totalScore > 0 && (
         <p className="relative z-10 mb-6 text-sm text-cream/50 font-body">
           Leading: <span className="text-marigold font-semibold">{topTeam.name}</span> · Round in progress:{' '}
-          <span className="text-cream/70">{currentRound}</span>
+          <span className="text-cream/70 capitalize">{currentRound}</span> · Questions completed:{' '}
+          <span className="text-emerald font-semibold">{totalCompleted} ✓</span>
         </p>
       )}
 
@@ -95,7 +103,7 @@ export default function Dashboard() {
         {!eventStarted ? (
           <button
             onClick={() => requestRound('round1', 'start')}
-            className="btn-primary w-full flex items-center justify-center gap-2 text-lg"
+            className="btn-primary w-full flex items-center justify-center gap-2 text-lg shadow-glow"
           >
             <Play size={20} fill="currentColor" /> Start Event
           </button>
@@ -110,11 +118,18 @@ export default function Dashboard() {
                 goToRound(target as RoundKey);
               }
             }}
-            className="btn-primary w-full flex items-center justify-center gap-2 text-lg"
+            className="btn-primary w-full flex items-center justify-center gap-2 text-lg shadow-glow"
           >
             <Play size={20} fill="currentColor" /> Continue Event
           </button>
         )}
+
+        <button
+          onClick={() => setShowQRModal(true)}
+          className="btn-secondary w-full flex items-center justify-center gap-2 text-sm py-2.5 border border-marigold/30 text-marigold hover:text-white"
+        >
+          <QrCode size={18} /> Round 3 Team Buzzer QR Code
+        </button>
 
         <div className="grid grid-cols-2 gap-3 w-full">
           <button
@@ -137,6 +152,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-4 mt-2 text-xs text-cream/40">
           <span className="flex items-center gap-1.5">
             <Users size={14} /> {teams.length} Teams
+          </span>
+          <span className="flex items-center gap-1.5 text-emerald">
+            <CheckCircle2 size={14} /> {totalCompleted} Checked
           </span>
           <button
             onClick={() => {
@@ -164,9 +182,11 @@ export default function Dashboard() {
       </div>
 
       {showManager && <QuestionManager onClose={() => setShowManager(false)} />}
+      {showQRModal && <QRCodeModal onClose={() => setShowQRModal(false)} />}
       {pending && (
         <RoundRulesModal round={pending.round} onStart={confirmPending} onClose={() => setPending(null)} />
       )}
     </div>
   );
 }
+

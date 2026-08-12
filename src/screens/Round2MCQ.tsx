@@ -6,6 +6,7 @@ import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
 import GlassCard from '../components/GlassCard';
 import DiyaTimer from '../components/DiyaTimer';
+import QuestionStepperBar from '../components/QuestionStepperBar';
 import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
 
@@ -14,8 +15,20 @@ const CORRECT_POINTS = 10;
 const WRONG_POINTS = 0;
 
 export default function Round2MCQ() {
-  const { bank, r2Index, r2TimerDuration, nextR2, prevR2, setR2TimerDuration, goToRound, teams, awardPoints } =
-    useGameStore();
+  const {
+    bank,
+    r2Index,
+    r2TimerDuration,
+    nextR2,
+    prevR2,
+    goToR2,
+    setR2TimerDuration,
+    goToRound,
+    teams,
+    awardPoints,
+    markQuestionCompleted,
+  } = useGameStore();
+
   const question = bank.round2[r2Index];
   const { secondsLeft, running, start, pause, reset } = useCountdown(r2TimerDuration);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
@@ -36,6 +49,7 @@ export default function Round2MCQ() {
     const isCorrect = i === question.correctIndex;
     setSelectedIndex(i);
     awardPoints(activeTeamId, 'round2', isCorrect ? CORRECT_POINTS : WRONG_POINTS);
+    markQuestionCompleted('round2', question.id);
     setAwardedTeam(activeTeamId);
     if (isCorrect) {
       sfx.correct();
@@ -80,15 +94,21 @@ export default function Round2MCQ() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20 gap-6">
       <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
         <span className="brass-divider w-8" />
         Round 2 · Multiple Choice Challenge
         <span className="brass-divider w-8" />
-        <span className="text-cream/40">
-          Q{r2Index + 1} / {bank.round2.length}
-        </span>
       </div>
+
+      {/* Check Mark Navigation Stepper */}
+      <QuestionStepperBar
+        round="round2"
+        currentIndex={r2Index}
+        totalQuestions={bank.round2.length}
+        onSelectIndex={(i) => goToR2(i)}
+        questionIds={bank.round2.map((q) => q.id)}
+      />
 
       <div className="flex flex-col lg:flex-row items-center gap-8 w-full max-w-6xl">
         <div className="flex flex-col items-center gap-4">
@@ -123,7 +143,7 @@ export default function Round2MCQ() {
               initial={{ opacity: 0, x: 40, rotateY: -8 }}
               animate={{ opacity: 1, x: 0, rotateY: 0 }}
               exit={{ opacity: 0, x: -40 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             >
               <GlassCard arch className="p-8 mb-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -278,3 +298,4 @@ export default function Round2MCQ() {
     </div>
   );
 }
+
