@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Pause, RefreshCcw, Award, Trophy } from 'lucide-react';
+import { Play, Pause, RefreshCcw, Award, Trophy, CheckCircle } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
@@ -11,13 +11,25 @@ import { sfx } from '../utils/sound';
 const WHEEL_SIZE = 380;
 
 export default function Round4Wheel() {
-  const { bank, r4SelectedTopicId, r4Spinning, spinWheelStart, spinWheelStop, forceStopSpin, goToRound, teams, awardPoints } =
-    useGameStore();
+  const { 
+    bank, 
+    r4SelectedTopicId, 
+    r4Spinning, 
+    spinWheelStart, 
+    spinWheelStop, 
+    forceStopSpin, 
+    goToRound, 
+    teams, 
+    awardPoints,
+    removeRound4Topic // Make sure this is defined in your store
+  } = useGameStore();
+  
   const topics = bank.round4;
   const [rotation, setRotation] = useState(0);
   const spinTimeout = useRef<number | null>(null);
   const { secondsLeft, running, start, pause, reset } = useCountdown(120);
   const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
+  const [completedTopics, setCompletedTopics] = useState<string[]>([]);
 
   // A fresh page load can never have a real spin animation in flight — if the
   // "spinning" flag is somehow still true (e.g. an old cached build, or a
@@ -46,33 +58,34 @@ export default function Round4Wheel() {
 
   const spin = () => {
     if (r4Spinning || topics.length === 0) return;
+    
     sfx.spinStart();
     spinWheelStart();
     const winnerIndex = Math.floor(Math.random() * topics.length);
-    // The pointer is at the top (12 o'clock position = -90deg in standard math)
-    // For a conic gradient, the segments start at 0deg (3 o'clock) and go clockwise
-    // To align a segment with the top pointer, we need it to be at -90deg (or 270deg)
     const targetSegmentCenter = winnerIndex * segAngle + segAngle / 2;
-    // We want the center of the winning segment to align with the top pointer
-    // Top pointer is at -90deg, so we need: (360 - targetSegmentCenter + offset) % 360 = 90
-    // Actually, the rotation is applied clockwise, so to bring a segment to top:
-    // The segment at angle θ should be rotated by (270 - θ) degrees to reach top
+    // spin so that the winning segment lands under the top pointer (0deg).
+    // Account for the wheel's current visual angle (rotation mod 360) so that
+    // each spin lands correctly, not just the first one.
     const fullSpins = 5 + Math.floor(Math.random() * 3);
-    // The current visual angle of the wheel
     const currentVisualAngle = ((rotation % 360) + 360) % 360;
-    // We want the target segment center to be at the top (270deg in our rotation space)
-    // Because the wheel rotates clockwise, to bring segment at angle θ to top:
-    // We need rotation = 270 - θ (plus full spins for momentum)
-    const targetRotation = (270 - targetSegmentCenter + 360) % 360;
-    let delta = targetRotation - currentVisualAngle;
+    const desiredVisualAngle = (360 - targetSegmentCenter) % 360;
+    let delta = desiredVisualAngle - currentVisualAngle;
     if (delta <= 0) delta += 360;
     const finalRotation = rotation + fullSpins * 360 + delta;
     setRotation(finalRotation);
+    
     if (spinTimeout.current) window.clearTimeout(spinTimeout.current);
     spinTimeout.current = window.setTimeout(() => {
       sfx.spinStop();
-      spinWheelStop(topics[winnerIndex].id);
+      const selectedTopic = topics[winnerIndex];
+      spinWheelStop(selectedTopic.id);
       reset(120);
+      
+      // Remove the topic after it's been selected/presented
+      if (selectedTopic.isArrivalTopic) {
+        removeRound4Topic(selectedTopic.id);
+        setCompletedTopics(prev => [...prev, selectedTopic.id]);
+      }
     }, 4200);
   };
 
@@ -87,7 +100,46 @@ export default function Round4Wheel() {
       onPauseTimer: () => pause(),
     });
     return () => usePresenterActions.getState().clear();
-  }, [rotation, r4Spinning, topics]);
+  }, [rotation, r4Spinning, topics, spin, start, pause, goToRound]);
+
+  // Show completion screen when all topics are done
+  if (topics.length === 0 && completedTopics.length > 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+        <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
+          <span className="brass-divider w-8" />
+          Round 4 · Complete!
+          <span className="brass-divider w-8" />
+        </div>
+        
+        <GlassCard arch glow="saffron" className="p-8 text-center max-w-lg">
+          <div className="flex justify-center mb-4">
+            <div className="h-20 w-20 rounded-full bg-emerald/20 flex items-center justify-center">
+              <CheckCircle size={40} className="text-emerald" />
+            </div>
+          </div>
+          <h2 className="font-display text-3xl text-gradient-saffron font-bold mb-3">
+            All Topics Completed! 🎉
+          </h2>
+          <p className="text-cream/70 mb-2">
+            You've successfully completed all {completedTopics.length} Round 4 topics!
+          </p>
+          <p className="text-cream/50 text-sm mb-6">
+            Great job presenting all the arrival topics.
+          </p>
+          <button
+            onClick={() => {
+              sfx.navigate();
+              goToRound('scoreboard');
+            }}
+            className="btn-primary flex items-center gap-2 mx-auto"
+          >
+            <Trophy size={18} /> View Final Scoreboard
+          </button>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
@@ -95,6 +147,11 @@ export default function Round4Wheel() {
         <span className="brass-divider w-8" />
         Round 4 · Spin Wheel Challenge
         <span className="brass-divider w-8" />
+      </div>
+
+      {/* Show remaining topics counter */}
+      <div className="text-sm text-cream/50">
+        {topics.length} topic{topics.length !== 1 ? 's' : ''} remaining
       </div>
 
       <div className="relative" style={{ width: WHEEL_SIZE, height: WHEEL_SIZE }}>
@@ -144,10 +201,10 @@ export default function Round4Wheel() {
 
       <button
         onClick={spin}
-        disabled={r4Spinning}
+        disabled={r4Spinning || topics.length === 0}
         className="btn-primary flex items-center gap-2 text-lg px-8"
       >
-        {r4Spinning ? 'Spinning…' : 'Spin the Wheel'}
+        {r4Spinning ? 'Spinning…' : topics.length === 0 ? 'All Done!' : 'Spin the Wheel'}
       </button>
 
       <AnimatePresence>
@@ -202,15 +259,27 @@ export default function Round4Wheel() {
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  sfx.navigate();
-                  goToRound('scoreboard');
-                }}
-                className="btn-primary mt-6 flex items-center gap-2 mx-auto"
-              >
-                <Trophy size={18} /> Finish · View Scoreboard
-              </button>
+              <div className="flex gap-3 mt-6 justify-center">
+                <button
+                  onClick={() => {
+                    sfx.navigate();
+                    // Spin again without going to scoreboard
+                    spin();
+                  }}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCcw size={16} /> Spin Again
+                </button>
+                <button
+                  onClick={() => {
+                    sfx.navigate();
+                    goToRound('scoreboard');
+                  }}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Trophy size={18} /> View Scoreboard
+                </button>
+              </div>
             </GlassCard>
           </motion.div>
         )}

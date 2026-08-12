@@ -60,6 +60,9 @@ interface GameState {
   spinWheelStop: (topicId: string) => void;
   forceStopSpin: () => void;
 
+  // ADD THIS NEW ACTION
+  removeRound4Topic: (topicId: string) => void;
+
   startTimer: (seconds: number) => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
@@ -161,6 +164,15 @@ export const useGameStore = create<GameState>()(
       spinWheelStop: (topicId) => set({ r4Spinning: false, r4SelectedTopicId: topicId }),
       forceStopSpin: () => set({ r4Spinning: false }),
 
+      // ADD THIS NEW ACTION IMPLEMENTATION
+      removeRound4Topic: (topicId: string) =>
+        set((state) => ({
+          bank: {
+            ...state.bank,
+            round4: state.bank.round4.filter((topic) => topic.id !== topicId),
+          },
+        })),
+
       startTimer: (seconds) => set({ timerRunning: true, timerSecondsLeft: seconds }),
       pauseTimer: () => set({ timerRunning: false }),
       resumeTimer: () => set({ timerRunning: true }),
@@ -190,16 +202,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'gyan-challenge-storage',
-      // IndexedDB rather than the default localStorage — localStorage's
-      // ~5-10MB per-origin quota was silently failing to save once bhajan
-      // audio clips and picture-question images pushed the persisted
-      // state past it, which is why newly added content could disappear
-      // on refresh. IndexedDB's quota is far larger.
       storage: createJSONStorage(() => indexedDbStorage),
-      // These are transient, moment-to-moment UI flags — not something we ever
-      // want frozen into storage. If the page reloads mid-spin or mid-timer
-      // (e.g. a presenter accidentally refreshes), persisting these would leave
-      // the spin wheel or countdown permanently "stuck" on the next load.
       partialize: (state) => {
         const { r4Spinning, timerRunning, timerSecondsLeft, r1Revealed, r3Revealed, ...rest } = state;
         return rest;
