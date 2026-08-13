@@ -53,7 +53,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center px-6 py-24 overflow-hidden">
+    <div className="relative flex-1 w-full flex flex-col items-center justify-center p-4 sm:p-6 my-auto max-w-7xl mx-auto overflow-hidden">
       <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40">
         <MandalaRing size={640} />
       </div>

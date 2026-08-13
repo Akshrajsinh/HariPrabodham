@@ -21,7 +21,7 @@ export default function Scoreboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+    <div className="flex-1 w-full flex flex-col items-center justify-between p-4 sm:p-6 gap-4 my-auto max-w-4xl mx-auto">
       <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
         <span className="brass-divider w-8" />
         Live Scoreboard

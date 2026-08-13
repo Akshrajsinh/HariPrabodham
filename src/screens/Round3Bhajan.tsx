@@ -160,7 +160,7 @@ export default function Round3Bhajan() {
 
   if (!track) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex-1 w-full flex items-center justify-center">
         <p className="text-cream/60 font-body">No bhajan tracks loaded. Add some via Manage Data.</p>
       </div>
     );
@@ -169,9 +169,9 @@ export default function Round3Bhajan() {
   const audioSrc = customAudioUrl || track.audioUrl;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20 gap-6">
+    <div className="flex-1 w-full flex flex-col items-center justify-between p-4 sm:p-6 gap-3 my-auto max-w-7xl mx-auto">
       {/* Header & QR Button */}
-      <div className="w-full max-w-4xl flex items-center justify-between gap-4">
+      <div className="w-full flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
           <span className="brass-divider w-8" />
           Round 3 · Bhajan Tune Challenge

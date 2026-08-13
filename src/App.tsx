@@ -37,22 +37,23 @@ function App() {
   const Screen = screens[currentRound] || Dashboard;
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="relative h-screen w-full overflow-hidden flex flex-col bg-night text-cream">
       <AmbientBackground />
       <TopBar />
-      <div className="relative z-10 h-screen w-full overflow-y-auto no-scrollbar">
+      <main className="relative z-10 flex-1 w-full pt-14 overflow-y-auto no-scrollbar flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentRound}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-1 w-full flex flex-col"
           >
             <Screen />
           </motion.div>
         </AnimatePresence>
-      </div>
+      </main>
     </div>
   );
 }

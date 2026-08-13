@@ -8,7 +8,7 @@ import GlassCard from '../components/GlassCard';
 import DiyaTimer from '../components/DiyaTimer';
 import { sfx } from '../utils/sound';
 
-const WHEEL_SIZE = 380;
+const WHEEL_SIZE = 340;
 
 export default function Round4Wheel() {
   const {
@@ -99,7 +99,7 @@ export default function Round4Wheel() {
 
   if (topics.length === 0 && completedTopics.length > 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+      <div className="flex-1 w-full flex flex-col items-center justify-center p-4 sm:p-6 my-auto gap-6">
         <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
           <span className="brass-divider w-8" />
           Round 4 · Complete!
@@ -134,7 +134,7 @@ export default function Round4Wheel() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-24 gap-8">
+    <div className="flex-1 w-full flex flex-col items-center justify-between p-4 sm:p-6 gap-4 my-auto max-w-7xl mx-auto">
       <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
         <span className="brass-divider w-8" />
         Round 4 · Spin Wheel Challenge
