@@ -9,7 +9,6 @@ import Round2MCQ from './screens/Round2MCQ';
 import Round3Bhajan from './screens/Round3Bhajan';
 import Round4Wheel from './screens/Round4Wheel';
 import Scoreboard from './screens/Scoreboard';
-import MobileBuzzerClient from './screens/MobileBuzzerClient';
 import SettingsView from './screens/SettingsView';
 
 const screens = {
@@ -19,39 +18,13 @@ const screens = {
   round3: Round3Bhajan,
   round4: Round4Wheel,
   scoreboard: Scoreboard,
-  buzzer: MobileBuzzerClient,
   settings: SettingsView,
 };
 
 function App() {
   useKeyboardShortcuts();
   const currentRound = useGameStore((s) => s.currentRound);
-
-  // Check if opened via QR code URL or direct link with ?mode=buzzer, ?mode=join, or ?room=
-  const isBuzzerMode = (() => {
-    if (typeof window === 'undefined') return false;
-    if (currentRound === 'buzzer') return true;
-    const search = window.location.search;
-    const hash = window.location.hash;
-    const href = window.location.href;
-    return (
-      search.includes('mode=buzzer') ||
-      search.includes('mode=join') ||
-      search.includes('room=') ||
-      hash.includes('mode=buzzer') ||
-      hash.includes('mode=join') ||
-      hash.includes('room=') ||
-      href.includes('mode=buzzer') ||
-      href.includes('mode=join') ||
-      href.includes('room=')
-    );
-  })();
-
-  if (isBuzzerMode) {
-    return <MobileBuzzerClient />;
-  }
-
-  const Screen = screens[currentRound] || Dashboard;
+  const Screen = (screens as any)[currentRound] || Dashboard;
 
   return (
     <div className="relative h-screen w-full overflow-hidden flex flex-col bg-night text-cream">
@@ -76,4 +49,3 @@ function App() {
 }
 
 export default App;
-

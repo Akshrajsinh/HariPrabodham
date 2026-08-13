@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Hash, Trophy } from 'lucide-react';
+import { Play, Trophy } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import GlassCard from '../components/GlassCard';
 import MandalaRing from '../components/MandalaRing';
 import SwaminarayanTilakIcon from '../components/SwaminarayanTilakIcon';
 import RoundRulesModal from '../components/RoundRulesModal';
-import RoomInfoModal from '../components/RoomInfoModal';
 import { sfx } from '../utils/sound';
 
 type PlayableRound = 'round1' | 'round2' | 'round3' | 'round4';
@@ -14,7 +13,6 @@ type PlayableRound = 'round1' | 'round2' | 'round3' | 'round4';
 export default function Dashboard() {
   const { eventStarted, currentRound, teams, startEvent, goToRound, completedQuestions } =
     useGameStore();
-  const [showQRModal, setShowQRModal] = useState(false);
   const [pending, setPending] = useState<{ round: PlayableRound; kind: 'start' | 'nav' } | null>(null);
 
   const topTeam = [...teams].sort((a, b) => b.totalScore - a.totalScore)[0];
@@ -210,27 +208,17 @@ export default function Dashboard() {
           </button>
         )}
 
-        <div className="grid grid-cols-2 gap-2.5 w-full">
-          <button
-            onClick={() => setShowQRModal(true)}
-            className="btn-secondary text-xs py-2.5 font-extrabold flex items-center justify-center gap-1.5 border-amber-400/40 text-amber-300"
-          >
-            <Hash size={16} /> Buzzer Room Code
-          </button>
-
-          <button
-            onClick={() => {
-              sfx.click();
-              goToRound('scoreboard');
-            }}
-            className="btn-secondary text-xs py-2.5 font-extrabold flex items-center justify-center gap-1.5 border-amber-400/40"
-          >
-            <Trophy size={16} /> Scoreboard
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            sfx.click();
+            goToRound('scoreboard');
+          }}
+          className="btn-secondary w-full text-xs py-2.5 font-extrabold flex items-center justify-center gap-1.5 border-amber-400/40"
+        >
+          <Trophy size={16} /> Scoreboard
+        </button>
       </GlassCard>
 
-      {showQRModal && <RoomInfoModal onClose={() => setShowQRModal(false)} />}
       {pending && (
         <RoundRulesModal round={pending.round} onStart={confirmPending} onClose={() => setPending(null)} />
       )}
