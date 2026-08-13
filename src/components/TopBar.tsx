@@ -25,6 +25,7 @@ const navItems: { id: RoundKey; label: string }[] = [
   { id: 'round3', label: 'Round 3' },
   { id: 'round4', label: 'Round 4' },
   { id: 'scoreboard', label: 'Scoreboard' },
+  { id: 'settings', label: '⚙️ Settings' },
 ];
 
 export default function TopBar() {

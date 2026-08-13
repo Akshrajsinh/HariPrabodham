@@ -10,6 +10,7 @@ import Round3Bhajan from './screens/Round3Bhajan';
 import Round4Wheel from './screens/Round4Wheel';
 import Scoreboard from './screens/Scoreboard';
 import MobileBuzzerClient from './screens/MobileBuzzerClient';
+import SettingsView from './screens/SettingsView';
 
 const screens = {
   dashboard: Dashboard,
@@ -19,6 +20,7 @@ const screens = {
   round4: Round4Wheel,
   scoreboard: Scoreboard,
   buzzer: MobileBuzzerClient,
+  settings: SettingsView,
 };
 
 function App() {

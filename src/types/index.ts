@@ -50,7 +50,7 @@ export interface Team {
   };
 }
 
-export type RoundKey = 'dashboard' | 'round1' | 'round2' | 'round3' | 'round4' | 'scoreboard' | 'buzzer';
+export type RoundKey = 'dashboard' | 'round1' | 'round2' | 'round3' | 'round4' | 'scoreboard' | 'buzzer' | 'settings';
 
 export interface BuzzerEntry {
   teamId: string;
