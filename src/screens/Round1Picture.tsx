@@ -32,13 +32,14 @@ export default function Round1Picture() {
     goToR1,
     goToRound,
     teams,
-    awardPoints,
+    questionScoringLog,
+    giveMarksOnce,
+    undoMarks,
     markQuestionCompleted,
   } = useGameStore();
 
   const question = bank.round1[r1Index];
   const { secondsLeft, running, start, reset } = useCountdown(30);
-  const [awardedTeam, setAwardedTeam] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(bank.round1.length === 0);
   const [draft, setDraft] = useState<ImageQuestion>(emptyDraft());
   const [imageBusy, setImageBusy] = useState(false);
@@ -49,7 +50,6 @@ export default function Round1Picture() {
   // Reset timer and start it automatically when question changes
   useEffect(() => {
     reset(30);
-    setAwardedTeam(null);
     timerStartedRef.current = false;
     // Start timer automatically when question loads and is not revealed yet
     if (!r1Revealed) {
@@ -320,24 +320,42 @@ export default function Round1Picture() {
                     ★ Award {question.points ?? 5} points (Correct = +5, Wrong = 0) to the team that answered:
                   </p>
                   <div className="flex flex-wrap justify-center gap-2.5">
-                    {teams.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          awardPoints(t.id, 'round1', question.points ?? 5);
-                          markQuestionCompleted('round1', question.id);
-                          setAwardedTeam(t.id);
-                          sfx.correct();
-                        }}
-                        className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-score font-extrabold flex items-center gap-2 transition-all ${
-                          awardedTeam === t.id
-                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white shadow-[0_0_25px_rgba(16,185,129,0.8)] border-2 border-white scale-105'
-                            : 'glass text-white hover:text-white hover:border-amber-300/60'
-                        }`}
-                      >
-                        <Award size={16} className={awardedTeam === t.id ? 'text-white' : 'text-amber-300'} /> {t.name} (+5 pts)
-                      </button>
-                    ))}
+                    {teams.map((t) => {
+                      const pts = question.points ?? 5;
+                      const scoreLog = questionScoringLog[`round1_${question.id}_${t.id}`] || {};
+
+                      return scoreLog.gave ? (
+                        <div key={t.id} className="flex items-center gap-1.5 glass p-1.5 rounded-xl border border-emerald-400">
+                          <span className="text-xs font-score font-extrabold text-emerald-300 px-1">
+                            ✓ {t.name} (+{pts} pts)
+                          </span>
+                          <button
+                            onClick={() => {
+                              undoMarks(t.id, 'round1', question.id, 'give');
+                              sfx.click();
+                            }}
+                            className="text-[11px] text-emerald-200 hover:text-white underline font-score"
+                            title="Undo points"
+                          >
+                            Undo
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            const ok = giveMarksOnce(t.id, 'round1', question.id, pts);
+                            if (ok) {
+                              sfx.correct();
+                              fireMarigoldBurst();
+                            }
+                          }}
+                          className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-score font-extrabold flex items-center gap-2 transition-all glass text-white hover:text-white hover:border-amber-300/60"
+                        >
+                          <Award size={16} className="text-amber-300" /> {t.name} (+{pts} pts)
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

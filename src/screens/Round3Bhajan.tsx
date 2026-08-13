@@ -43,7 +43,10 @@ export default function Round3Bhajan() {
     revealR3,
     goToRound,
     teams,
-    awardPoints,
+    questionScoringLog,
+    giveMarksOnce,
+    cutMarksOnce,
+    undoMarks,
     markQuestionCompleted,
   } = useGameStore();
 
@@ -68,6 +71,33 @@ export default function Round3Bhajan() {
     buzzerChannel.send({ type: 'RESET' });
     buzzerChannel.send({ type: 'SYNC', queue: [], locked: buzzersLocked });
   }, [r3Index]);
+
+  const handleAwardGive = (teamId: string) => {
+    if (!track) return;
+    const ok = giveMarksOnce(teamId, 'round3', track.id, CORRECT_POINTS);
+    if (ok) {
+      setAwardedTeam(teamId);
+      sfx.correct();
+      fireMarigoldBurst();
+    } else {
+      sfx.wrong();
+    }
+  };
+
+  const handleAwardCut = (teamId: string) => {
+    if (!track) return;
+    const ok = cutMarksOnce(teamId, 'round3', track.id, WRONG_POINTS);
+    if (ok) {
+      setAwardedTeam(teamId);
+      sfx.wrong();
+    }
+  };
+
+  const handleUndoScore = (teamId: string, type: 'give' | 'cut') => {
+    if (!track) return;
+    undoMarks(teamId, 'round3', track.id, type);
+    sfx.click();
+  };
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -112,20 +142,6 @@ export default function Round3Bhajan() {
     setBuzzerLock(nextLocked);
     buzzerChannel.send({ type: 'LOCK', locked: nextLocked });
     buzzerChannel.send({ type: 'SYNC', queue: buzzerQueue, locked: nextLocked });
-  };
-
-  const handleAwardPoints = (teamId: string, isCorrect: boolean) => {
-    if (!track) return;
-    const pts = isCorrect ? CORRECT_POINTS : WRONG_POINTS;
-    awardPoints(teamId, 'round3', pts);
-    setAwardedTeam(teamId);
-    markQuestionCompleted('round3', track.id);
-    if (isCorrect) {
-      sfx.correct();
-      fireMarigoldBurst();
-    } else {
-      sfx.wrong();
-    }
   };
 
   useEffect(() => {
@@ -201,7 +217,7 @@ export default function Round3Bhajan() {
         <div className="flex items-center gap-2.5">
           <span className="text-xs font-mono text-saffron-300 bg-saffron-950/80 px-3 py-2 rounded-xl border border-saffron-500/40 flex items-center gap-1.5 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Room: <strong className="uppercase text-white">{buzzerChannel.getRoom()}</strong>
+            Room Code: <strong className="uppercase text-saffron-300 font-mono text-sm tracking-wider">{buzzerChannel.getRoom().length === 6 ? `${buzzerChannel.getRoom().slice(0, 3)} ${buzzerChannel.getRoom().slice(3)}` : buzzerChannel.getRoom()}</strong>
           </span>
 
           <button
@@ -311,23 +327,53 @@ export default function Round3Bhajan() {
                       ★ Manual Scoring: Correct (+20) · Wrong (-10)
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {teams.map((t) => (
-                        <div key={t.id} className="flex items-center gap-1 glass p-1.5 rounded-xl border border-white/20">
-                          <span className="text-xs font-score font-bold text-white px-1.5">{t.name}</span>
-                          <button
-                            onClick={() => handleAwardPoints(t.id, true)}
-                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
-                          >
-                            +20
-                          </button>
-                          <button
-                            onClick={() => handleAwardPoints(t.id, false)}
-                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
-                          >
-                            -10
-                          </button>
-                        </div>
-                      ))}
+                      {teams.map((t) => {
+                        const scoreLog = questionScoringLog[`round3_${track.id}_${t.id}`] || {};
+                        return (
+                          <div key={t.id} className="flex items-center gap-1.5 glass p-1.5 rounded-xl border border-white/20">
+                            <span className="text-xs font-score font-bold text-white px-1.5">{t.name}</span>
+                            {scoreLog.gave ? (
+                              <span className="px-2 py-1 bg-emerald-700/80 text-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1">
+                                ✓ +20
+                                <button
+                                  onClick={() => handleUndoScore(t.id, 'give')}
+                                  className="ml-1 text-[10px] text-emerald-200 hover:text-white underline"
+                                  title="Undo +20"
+                                >
+                                  Undo
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleAwardGive(t.id)}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
+                              >
+                                +20
+                              </button>
+                            )}
+
+                            {scoreLog.cut ? (
+                              <span className="px-2 py-1 bg-red-700/80 text-red-100 rounded-lg text-xs font-bold flex items-center gap-1">
+                                ✗ -10
+                                <button
+                                  onClick={() => handleUndoScore(t.id, 'cut')}
+                                  className="ml-1 text-[10px] text-red-200 hover:text-white underline"
+                                  title="Undo -10"
+                                >
+                                  Undo
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleAwardCut(t.id)}
+                                className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
+                              >
+                                -10
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -426,22 +472,54 @@ export default function Round3Bhajan() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => handleAwardPoints(entry.teamId, true)}
-                            className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-300 shadow flex items-center gap-1"
-                            title="Correct (+20 pts)"
-                          >
-                            <CheckCircle2 size={14} /> +20
-                          </button>
-                          <button
-                            onClick={() => handleAwardPoints(entry.teamId, false)}
-                            className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-red-600 hover:bg-red-500 text-white border border-red-300 shadow flex items-center gap-1"
-                            title="Wrong (-10 pts)"
-                          >
-                            <XCircle size={14} /> -10
-                          </button>
-                        </div>
+                        {(() => {
+                          const scoreLog = questionScoringLog[`round3_${track.id}_${entry.teamId}`] || {};
+                          return (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {scoreLog.gave ? (
+                                <span className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-emerald-700/80 text-emerald-100 border border-emerald-400 flex items-center gap-1">
+                                  ✓ +20
+                                  <button
+                                    onClick={() => handleUndoScore(entry.teamId, 'give')}
+                                    className="ml-1 text-[10px] text-emerald-200 hover:text-white underline"
+                                    title="Undo +20"
+                                  >
+                                    Undo
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAwardGive(entry.teamId)}
+                                  className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-300 shadow flex items-center gap-1"
+                                  title="Correct (+20 pts)"
+                                >
+                                  <CheckCircle2 size={14} /> +20
+                                </button>
+                              )}
+
+                              {scoreLog.cut ? (
+                                <span className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-red-700/80 text-red-100 border border-red-400 flex items-center gap-1">
+                                  ✗ -10
+                                  <button
+                                    onClick={() => handleUndoScore(entry.teamId, 'cut')}
+                                    className="ml-1 text-[10px] text-red-200 hover:text-white underline"
+                                    title="Undo -10"
+                                  >
+                                    Undo
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAwardCut(entry.teamId)}
+                                  className="px-2.5 py-1.5 rounded-xl text-xs font-score font-extrabold bg-red-600 hover:bg-red-500 text-white border border-red-300 shadow flex items-center gap-1"
+                                  title="Wrong (-10 pts)"
+                                >
+                                  <XCircle size={14} /> -10
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     );
                   })}

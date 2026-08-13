@@ -75,6 +75,15 @@ export interface EventMeta {
   eventStarted: boolean;
 }
 
+export interface QuestionScoreLog {
+  [logKey: string]: {
+    gave?: boolean;
+    cut?: boolean;
+    pointsGave?: number;
+    pointsCut?: number;
+  };
+}
+
 export interface QuestionBank {
   round1: ImageQuestion[];
   round2: MCQQuestion[];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Trophy, Smartphone, RefreshCw, Volume2 } from 'lucide-react';
+import { Flame, Trophy, RefreshCw, Volume2, KeyRound, ArrowRight } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { buzzerChannel } from '../utils/buzzerChannel';
 import type { BuzzerSignal } from '../utils/buzzerChannel';
@@ -11,23 +11,43 @@ import { sfx } from '../utils/sound';
 
 export default function MobileBuzzerClient() {
   const { teams, buzzerQueue, buzzersLocked, registerBuzzer, resetBuzzers, setBuzzerLock } = useGameStore();
-  const [roomId, setRoomId] = useState<string>(() => buzzerChannel.getRoom());
 
-  // Extract room ID from URL search params on load
-  useEffect(() => {
+  // 6-Digit Room Code State
+  const [inputRoomCode, setInputRoomCode] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlRoom = params.get('room');
+      if (urlRoom) return urlRoom.trim().toUpperCase();
+      if (window.location.hash.includes('room=')) {
+        const match = window.location.hash.match(/room=([^&]+)/);
+        if (match) return decodeURIComponent(match[1]).trim().toUpperCase();
+      }
+    }
+    return buzzerChannel.getRoom().toUpperCase();
+  });
+
+  const [joinedRoom, setJoinedRoom] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlRoom = params.get('room');
       if (urlRoom) {
         buzzerChannel.setRoom(urlRoom);
-        setRoomId(urlRoom.toLowerCase());
+        return urlRoom.trim().toUpperCase();
+      }
+      // Check if user already joined room previously in localStorage
+      const savedRoom = localStorage.getItem('gyan_buzzer_joined_room');
+      if (savedRoom) {
+        buzzerChannel.setRoom(savedRoom);
+        return savedRoom.trim().toUpperCase();
       }
     }
-  }, []);
+    return null;
+  });
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
     return typeof localStorage !== 'undefined' ? localStorage.getItem('gyan_buzzer_team_id') : null;
   });
+
   const [customTeamName, setCustomTeamName] = useState<string>(() => {
     return typeof localStorage !== 'undefined' ? localStorage.getItem('gyan_buzzer_team_name') || '' : '';
   });
@@ -38,7 +58,22 @@ export default function MobileBuzzerClient() {
     timeDiffMs?: number;
   }>({ buzzed: false });
 
-  // Sync with global buzzer state and listener
+  // Sync room ID on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlRoom = params.get('room');
+      if (urlRoom) {
+        const cleanRoom = urlRoom.trim().toUpperCase();
+        buzzerChannel.setRoom(cleanRoom);
+        setInputRoomCode(cleanRoom);
+        setJoinedRoom(cleanRoom);
+        localStorage.setItem('gyan_buzzer_joined_room', cleanRoom);
+      }
+    }
+  }, []);
+
+  // Real-time listener for signals
   useEffect(() => {
     const unsub = buzzerChannel.subscribe((signal: BuzzerSignal) => {
       if (signal.type === 'SYNC') {
@@ -56,19 +91,18 @@ export default function MobileBuzzerClient() {
       }
     });
 
-    // Send JOIN signal to request latest sync from host
-    if (selectedTeamId || customTeamName) {
+    if (joinedRoom && (selectedTeamId || customTeamName)) {
       const currentTeamName = customTeamName || teams.find((t) => t.id === selectedTeamId)?.name;
       buzzerChannel.send({
         type: 'JOIN',
         teamId: selectedTeamId || `custom-${Date.now()}`,
         teamName: currentTeamName,
-        room: roomId,
+        room: joinedRoom,
       });
     }
 
     return unsub;
-  }, [resetBuzzers, setBuzzerLock, selectedTeamId, customTeamName, roomId, teams]);
+  }, [resetBuzzers, setBuzzerLock, selectedTeamId, customTeamName, joinedRoom, teams]);
 
   // Update buzz rank if registered team is in queue
   useEffect(() => {
@@ -92,19 +126,31 @@ export default function MobileBuzzerClient() {
     }
   }, [buzzerQueue, selectedTeamId, customTeamName, teams]);
 
-  const selectTeam = (teamId: string, name?: string) => {
-    sfx.click();
-    setSelectedTeamId(teamId);
-    if (name) setCustomTeamName(name);
-    localStorage.setItem('gyan_buzzer_team_id', teamId);
-    if (name) localStorage.setItem('gyan_buzzer_team_name', name);
+  const handleJoinRoomAndTeam = (teamId?: string, teamName?: string) => {
+    const code = inputRoomCode.trim().toUpperCase();
+    if (!code || code.length < 4) {
+      alert('Please enter a valid 6-digit room code!');
+      return;
+    }
 
-    // Broadcast JOIN signal when selecting team
+    const tId = teamId || selectedTeamId || `custom-${Date.now()}`;
+    const tName = teamName || customTeamName || teams.find((t) => t.id === tId)?.name || 'Guest Team';
+
+    sfx.click();
+    buzzerChannel.setRoom(code);
+    setJoinedRoom(code);
+    setSelectedTeamId(tId);
+    setCustomTeamName(tName);
+
+    localStorage.setItem('gyan_buzzer_joined_room', code);
+    localStorage.setItem('gyan_buzzer_team_id', tId);
+    localStorage.setItem('gyan_buzzer_team_name', tName);
+
     buzzerChannel.send({
       type: 'JOIN',
-      teamId,
-      teamName: name || teams.find((t) => t.id === teamId)?.name,
-      room: roomId,
+      teamId: tId,
+      teamName: tName,
+      room: code,
     });
   };
 
@@ -118,26 +164,22 @@ export default function MobileBuzzerClient() {
       return;
     }
 
-    // Play tactile vibration if supported
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([100, 30, 100]);
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     sfx.fanfare();
 
     const timestamp = Date.now();
     const result = registerBuzzer(finalTeamId, finalName);
 
-    // Broadcast across devices/tabs
     buzzerChannel.send({
       type: 'BUZZ',
       teamId: finalTeamId,
       teamName: finalName,
       timestamp,
-      room: roomId,
+      room: joinedRoom || inputRoomCode,
     });
 
     if (result.rank) {
@@ -149,8 +191,10 @@ export default function MobileBuzzerClient() {
   const displayName = customTeamName || currentTeamObj?.name || 'Selected Team';
   const displayColor = currentTeamObj?.color || '#FF6B1A';
 
+  const isJoined = Boolean(joinedRoom && (selectedTeamId || customTeamName));
+
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-night text-cream flex flex-col items-center justify-between p-6">
+    <div className="relative min-h-screen w-full overflow-hidden bg-night text-cream flex flex-col items-center justify-between p-4 sm:p-6">
       <AmbientBackground />
 
       {/* Top Header */}
@@ -159,65 +203,109 @@ export default function MobileBuzzerClient() {
           <Flame className="text-saffron-400" size={24} />
           Gyan Quiz Buzzer
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-score text-cream/60 uppercase tracking-widest flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
-            <Smartphone size={13} className="text-marigold" /> Room: <strong className="text-saffron-400 font-mono">{roomId}</strong>
-          </span>
-        </div>
+        {isJoined && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-score text-cream/70 uppercase tracking-widest flex items-center gap-1.5 bg-saffron-950/80 px-3 py-1 rounded-full border border-saffron-500/40">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Room: <strong className="text-saffron-300 font-mono font-bold">{joinedRoom}</strong>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main Body */}
-      <div className="relative z-10 w-full max-w-md my-auto flex flex-col items-center text-center py-6">
-        {!selectedTeamId && !customTeamName ? (
-          <GlassCard arch glow="saffron" className="w-full p-6 space-y-5">
+      <div className="relative z-10 w-full max-w-md my-auto flex flex-col items-center text-center py-4">
+        {!isJoined ? (
+          /* STEP 1: BuzzLive Style 6-Digit Room & Team Join Page */
+          <GlassCard arch glow="saffron" className="w-full p-6 space-y-5 border-2 border-saffron-500/40 shadow-[0_0_40px_rgba(255,107,26,0.3)]">
             <div className="text-center">
-              <span className="text-xs font-score text-marigold uppercase tracking-widest block mb-1">Step 1 of 2</span>
-              <h2 className="font-display text-2xl font-bold text-cream">Select Your Team</h2>
-              <p className="text-xs text-cream/60 mt-1">Tap your team below to activate your phone buzzer</p>
+              <span className="text-xs font-score text-marigold uppercase tracking-widest block mb-1">
+                Enter Room Code
+              </span>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-cream">
+                Join Live Quiz
+              </h2>
+              <p className="text-xs text-cream/60 mt-1">
+                Type the 6-digit room code from host screen & select your team
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              {teams.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => selectTeam(t.id, t.name)}
-                  className="glass p-4 rounded-2xl flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all text-center border border-white/10"
-                >
-                  <div
-                    className="h-4 w-4 rounded-full shadow-glow"
-                    style={{ background: t.color, boxShadow: `0 0 12px ${t.color}` }}
-                  />
-                  <span className="font-score font-bold text-sm text-cream">{t.name}</span>
-                </button>
-              ))}
+            {/* 6-Digit Code Input Box */}
+            <div className="space-y-2">
+              <label className="text-xs font-score text-saffron-300 uppercase tracking-wider block text-left">
+                6-Digit Room Code:
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={8}
+                  value={inputRoomCode}
+                  onChange={(e) => setInputRoomCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. 482910"
+                  className="w-full bg-black/80 border-2 border-saffron-400 rounded-2xl py-3 px-4 text-center font-mono font-black text-2xl tracking-[0.25em] text-saffron-300 outline-none focus:ring-4 focus:ring-saffron-500/40 shadow-inner uppercase"
+                />
+                <KeyRound size={18} className="absolute right-4 top-4 text-saffron-400/60" />
+              </div>
             </div>
 
-            <div className="pt-3 border-t border-white/10">
-              <p className="text-xs text-cream/50 mb-2">Or enter dynamic team name:</p>
-              <div className="flex gap-2">
+            {/* Team Selection */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <label className="text-xs font-score text-saffron-300 uppercase tracking-wider block text-left">
+                Select Your Team:
+              </label>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {teams.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setSelectedTeamId(t.id);
+                      setCustomTeamName(t.name);
+                    }}
+                    className={`p-3.5 rounded-2xl flex flex-col items-center gap-1.5 transition-all text-center border ${
+                      selectedTeamId === t.id
+                        ? 'bg-saffron-500/20 border-saffron-400 shadow-[0_0_20px_rgba(255,145,0,0.4)] scale-105'
+                        : 'glass hover:bg-white/10 border-white/10'
+                    }`}
+                  >
+                    <div
+                      className="h-3.5 w-3.5 rounded-full shadow-glow"
+                      style={{ background: t.color, boxShadow: `0 0 10px ${t.color}` }}
+                    />
+                    <span className="font-score font-bold text-xs text-cream">{t.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2">
                 <input
                   type="text"
                   value={customTeamName}
-                  onChange={(e) => setCustomTeamName(e.target.value)}
-                  placeholder="Team Name..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-cream outline-none focus:border-saffron-400"
-                />
-                <button
-                  onClick={() => {
-                    if (customTeamName.trim()) selectTeam(`custom-${Date.now()}`, customTeamName.trim());
+                  onChange={(e) => {
+                    setCustomTeamName(e.target.value);
+                    setSelectedTeamId(null);
                   }}
-                  disabled={!customTeamName.trim()}
-                  className="btn-primary text-xs px-4 disabled:opacity-50"
-                >
-                  Join
-                </button>
+                  placeholder="Or custom team name..."
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2.5 text-xs text-cream outline-none focus:border-saffron-400"
+                />
               </div>
             </div>
+
+            {/* Big Join Button */}
+            <button
+              onClick={() => handleJoinRoomAndTeam()}
+              disabled={!inputRoomCode.trim() || (!selectedTeamId && !customTeamName.trim())}
+              className="btn-primary w-full py-3.5 text-sm font-score font-black flex items-center justify-center gap-2 rounded-2xl shadow-[0_0_30px_rgba(255,107,26,0.8)] disabled:opacity-50 transition-all uppercase tracking-wider"
+            >
+              <span>JOIN BUZZER ROOM</span>
+              <ArrowRight size={18} />
+            </button>
           </GlassCard>
         ) : (
-          <div className="w-full space-y-6 flex flex-col items-center">
+          /* STEP 2: Active Tactile Buzzer View */
+          <div className="w-full space-y-5 flex flex-col items-center">
             {/* Active Team Badge */}
-            <div className="glass px-5 py-2.5 rounded-full flex items-center gap-3 border border-white/15">
+            <div className="glass px-5 py-2.5 rounded-full flex items-center gap-3 border border-saffron-500/30 bg-saffron-950/40 shadow-md">
               <div
                 className="h-3.5 w-3.5 rounded-full shrink-0 shadow-glow"
                 style={{ background: displayColor, boxShadow: `0 0 10px ${displayColor}` }}
@@ -225,19 +313,17 @@ export default function MobileBuzzerClient() {
               <span className="font-score font-bold text-cream text-base">{displayName}</span>
               <button
                 onClick={() => {
-                  setSelectedTeamId(null);
-                  setCustomTeamName('');
-                  localStorage.removeItem('gyan_buzzer_team_id');
-                  localStorage.removeItem('gyan_buzzer_team_name');
+                  setJoinedRoom(null);
+                  localStorage.removeItem('gyan_buzzer_joined_room');
                 }}
-                className="text-xs text-cream/40 hover:text-cream underline ml-2"
+                className="text-xs text-saffron-300 hover:text-white underline ml-2 font-mono"
               >
-                Change
+                Change Code / Team
               </button>
             </div>
 
             {/* Huge Tactile Buzzer Button */}
-            <div className="relative my-4">
+            <div className="relative my-3">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.92 }}
@@ -273,9 +359,9 @@ export default function MobileBuzzerClient() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="glass p-5 rounded-2xl w-full border border-emerald/40 text-center space-y-1"
+                  className="glass p-4 rounded-2xl w-full border border-emerald-500/40 text-center space-y-1 bg-emerald-950/30"
                 >
-                  <div className="flex items-center justify-center gap-2 text-emerald font-score font-bold text-lg">
+                  <div className="flex items-center justify-center gap-2 text-emerald-400 font-score font-bold text-lg">
                     <Trophy size={20} />
                     {buzzStatus.rank === 1
                       ? 'FIRST PLACE BUZZ! 🥇'
@@ -297,7 +383,7 @@ export default function MobileBuzzerClient() {
                 sfx.click();
                 handleBuzzerPress();
               }}
-              className="text-xs text-cream/40 flex items-center gap-1.5 hover:text-cream pt-2"
+              className="text-xs text-cream/50 flex items-center gap-1.5 hover:text-cream pt-1"
             >
               <Volume2 size={14} /> Test Buzzer Sound
             </button>

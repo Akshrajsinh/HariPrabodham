@@ -97,8 +97,8 @@ export default function Round2MCQ() {
     prevR2,
     goToRound,
     teams,
-    awardPoints,
-    markQuestionCompleted,
+    giveMarksOnce,
+    cutMarksOnce,
   } = useGameStore();
 
   const question = bank.round2[r2Index];
@@ -119,12 +119,12 @@ export default function Round2MCQ() {
     if (!activeTeamId || answered || !question) return;
     const isCorrect = i === question.correctIndex;
     setSelectedIndex(i);
-    awardPoints(activeTeamId, 'round2', isCorrect ? CORRECT_POINTS : WRONG_POINTS);
-    markQuestionCompleted('round2', question.id);
     if (isCorrect) {
+      giveMarksOnce(activeTeamId, 'round2', question.id, CORRECT_POINTS);
       sfx.correct();
       fireMarigoldBurst();
     } else {
+      cutMarksOnce(activeTeamId, 'round2', question.id, WRONG_POINTS);
       sfx.wrong();
     }
   };

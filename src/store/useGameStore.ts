@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import defaultBank from '../data/questionBank.json';
 import defaultTeams from '../data/teams.json';
 import { indexedDbStorage } from './indexedDbStorage';
-import type { Team, RoundKey, QuestionBank, BuzzerEntry, CompletedQuestions } from '../types';
+import type { Team, RoundKey, QuestionBank, BuzzerEntry, CompletedQuestions, QuestionScoreLog } from '../types';
 
 interface GameState {
   eventName: string;
@@ -70,6 +70,12 @@ interface GameState {
   registerBuzzer: (teamId: string, customTeamName?: string) => { success: boolean; rank?: number };
   resetBuzzers: () => void;
   setBuzzerLock: (locked: boolean) => void;
+
+  // One question 1-time mark give and 1-time mark cut log
+  questionScoringLog: QuestionScoreLog;
+  giveMarksOnce: (teamId: string, round: keyof CompletedQuestions, questionId: string, points: number) => boolean;
+  cutMarksOnce: (teamId: string, round: keyof CompletedQuestions, questionId: string, points: number) => boolean;
+  undoMarks: (teamId: string, round: keyof CompletedQuestions, questionId: string, type: 'give' | 'cut') => void;
 
   // Check Mark actions
   toggleQuestionCompleted: (round: keyof CompletedQuestions, questionId: string) => void;
@@ -242,6 +248,95 @@ export const useGameStore = create<GameState>()(
       resetBuzzers: () => set({ buzzerQueue: [] }),
       setBuzzerLock: (locked) => set({ buzzersLocked: locked }),
 
+      // Single-use per question scoring logic (1-time mark give & 1-time mark cut)
+      questionScoringLog: {},
+
+      giveMarksOnce: (teamId, round, questionId, points) => {
+        const logKey = `${round}_${questionId}_${teamId}`;
+        const state = get();
+        const currentLog = state.questionScoringLog[logKey] || {};
+
+        if (currentLog.gave) {
+          return false; // Already gave marks for this question
+        }
+
+        state.awardPoints(teamId, round, points);
+        state.markQuestionCompleted(round, questionId);
+
+        set((s) => ({
+          questionScoringLog: {
+            ...s.questionScoringLog,
+            [logKey]: {
+              ...s.questionScoringLog[logKey],
+              gave: true,
+              pointsGave: points,
+            },
+          },
+        }));
+        return true;
+      },
+
+      cutMarksOnce: (teamId, round, questionId, points) => {
+        const logKey = `${round}_${questionId}_${teamId}`;
+        const state = get();
+        const currentLog = state.questionScoringLog[logKey] || {};
+
+        if (currentLog.cut) {
+          return false; // Already cut marks for this question
+        }
+
+        const cutPoints = Math.abs(points);
+        state.awardPoints(teamId, round, -cutPoints);
+        state.markQuestionCompleted(round, questionId);
+
+        set((s) => ({
+          questionScoringLog: {
+            ...s.questionScoringLog,
+            [logKey]: {
+              ...s.questionScoringLog[logKey],
+              cut: true,
+              pointsCut: cutPoints,
+            },
+          },
+        }));
+        return true;
+      },
+
+      undoMarks: (teamId, round, questionId, type) => {
+        const logKey = `${round}_${questionId}_${teamId}`;
+        const state = get();
+        const currentLog = state.questionScoringLog[logKey];
+        if (!currentLog) return;
+
+        if (type === 'give' && currentLog.gave && currentLog.pointsGave !== undefined) {
+          state.awardPoints(teamId, round, -currentLog.pointsGave);
+          set((s) => {
+            const nextEntry = { ...s.questionScoringLog[logKey] };
+            delete nextEntry.gave;
+            delete nextEntry.pointsGave;
+            return {
+              questionScoringLog: {
+                ...s.questionScoringLog,
+                [logKey]: nextEntry,
+              },
+            };
+          });
+        } else if (type === 'cut' && currentLog.cut && currentLog.pointsCut !== undefined) {
+          state.awardPoints(teamId, round, currentLog.pointsCut);
+          set((s) => {
+            const nextEntry = { ...s.questionScoringLog[logKey] };
+            delete nextEntry.cut;
+            delete nextEntry.pointsCut;
+            return {
+              questionScoringLog: {
+                ...s.questionScoringLog,
+                [logKey]: nextEntry,
+              },
+            };
+          });
+        }
+      },
+
       // Check mark module logic
       toggleQuestionCompleted: (round, questionId) =>
         set((state) => {
@@ -305,6 +400,7 @@ export const useGameStore = create<GameState>()(
           buzzerQueue: [],
           buzzersLocked: false,
           completedQuestions: initialCompleted,
+          questionScoringLog: {},
           r4SelectedTopicId: null,
           r4Spinning: false,
           timerRunning: false,

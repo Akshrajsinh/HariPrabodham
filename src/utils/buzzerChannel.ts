@@ -19,6 +19,10 @@ const CLIENT_ID =
     ? Math.random().toString(36).substring(2, 9)
     : 'server';
 
+export function generate6DigitRoomCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export function getActiveRoomId(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
@@ -32,9 +36,13 @@ export function getActiveRoomId(): string {
     }
 
     const stored = localStorage.getItem('gyan_quiz_room_id');
-    if (stored) return stored.trim().toLowerCase();
+    if (stored && stored.trim().length >= 4) return stored.trim().toLowerCase();
+
+    const newCode = generate6DigitRoomCode();
+    localStorage.setItem('gyan_quiz_room_id', newCode);
+    return newCode;
   }
-  return 'gyan-quiz';
+  return '482910';
 }
 
 export function setActiveRoomId(room: string): void {
@@ -63,6 +71,12 @@ class BuzzerChannelService {
     this.roomId = newRoom;
     setActiveRoomId(this.roomId);
     this.reconnectRealtimeRelay();
+  }
+
+  public createNewRoomCode(): string {
+    const newCode = generate6DigitRoomCode();
+    this.setRoom(newCode);
+    return newCode;
   }
 
   public getRoom(): string {
@@ -141,7 +155,7 @@ class BuzzerChannelService {
 
       this.eventSource.onopen = () => {
         this.isConnected = true;
-        console.log('[BuzzerChannel] Connected to global relay for room:', this.roomId);
+        console.log('[BuzzerChannel] Connected to global relay for room code:', this.roomId);
       };
 
       this.eventSource.onmessage = (event) => {
