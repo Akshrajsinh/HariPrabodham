@@ -198,12 +198,19 @@ export default function Round3Bhajan() {
           <span className="brass-divider w-12" />
         </div>
 
-        <button
-          onClick={() => setShowQRModal(true)}
-          className="btn-primary px-5 py-2.5 text-xs font-score flex items-center gap-2 rounded-2xl shadow-[0_0_30px_rgba(255,145,0,0.7)] font-extrabold"
-        >
-          <QrCode size={18} /> Scan Team Buzzer QR
-        </button>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs font-mono text-saffron-300 bg-saffron-950/80 px-3 py-2 rounded-xl border border-saffron-500/40 flex items-center gap-1.5 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Room: <strong className="uppercase text-white">{buzzerChannel.getRoom()}</strong>
+          </span>
+
+          <button
+            onClick={() => setShowQRModal(true)}
+            className="btn-primary px-5 py-2.5 text-xs font-score flex items-center gap-2 rounded-2xl shadow-[0_0_30px_rgba(255,145,0,0.7)] font-extrabold"
+          >
+            <QrCode size={18} /> Scan Team Buzzer QR
+          </button>
+        </div>
       </div>
 
       {/* Main Content Layout */}

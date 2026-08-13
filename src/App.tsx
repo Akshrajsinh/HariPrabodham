@@ -27,10 +27,18 @@ function App() {
   useKeyboardShortcuts();
   const currentRound = useGameStore((s) => s.currentRound);
 
-  // Check if opened via QR code URL with ?mode=buzzer
-  const isBuzzerMode =
-    typeof window !== 'undefined' &&
-    (new URLSearchParams(window.location.search).get('mode') === 'buzzer' || currentRound === 'buzzer');
+  // Check if opened via QR code URL with ?mode=buzzer across search, hash, and full URL
+  const isBuzzerMode = (() => {
+    if (typeof window === 'undefined') return false;
+    if (currentRound === 'buzzer') return true;
+    const search = window.location.search;
+    const hash = window.location.hash;
+    return (
+      new URLSearchParams(search).get('mode') === 'buzzer' ||
+      hash.includes('mode=buzzer') ||
+      window.location.href.includes('mode=buzzer')
+    );
+  })();
 
   if (isBuzzerMode) {
     return <MobileBuzzerClient />;

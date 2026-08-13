@@ -1,4 +1,5 @@
-// Real-time cross-tab and cross-device buzzer communication channel
+// Real-time cross-tab, cross-device, and cross-network buzzer communication channel
+// Uses multi-transport pub/sub: ntfy.sh SSE + WebSocket + BroadcastChannel + localStorage
 
 export interface BuzzerSignal {
   type: 'BUZZ' | 'RESET' | 'LOCK' | 'SYNC' | 'JOIN';
@@ -13,14 +14,23 @@ export interface BuzzerSignal {
 
 const CHANNEL_NAME = 'gyan_quiz_buzzer_channel';
 const STORAGE_KEY = 'gyan_quiz_buzzer_signal';
-const CLIENT_ID = typeof window !== 'undefined' ? Math.random().toString(36).substring(2, 9) : 'server';
+const CLIENT_ID =
+  typeof window !== 'undefined'
+    ? Math.random().toString(36).substring(2, 9)
+    : 'server';
 
-// Default global room code for current event session
 export function getActiveRoomId(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
     if (roomParam) return roomParam.trim().toLowerCase();
+
+    // Check hash params as well
+    if (window.location.hash.includes('room=')) {
+      const match = window.location.hash.match(/room=([^&]+)/);
+      if (match) return decodeURIComponent(match[1]).trim().toLowerCase();
+    }
+
     const stored = localStorage.getItem('gyan_quiz_room_id');
     if (stored) return stored.trim().toLowerCase();
   }
@@ -37,57 +47,30 @@ class BuzzerChannelService {
   private channel: BroadcastChannel | null = null;
   private listeners: ((signal: BuzzerSignal) => void)[] = [];
   private ws: WebSocket | null = null;
+  private eventSource: EventSource | null = null;
   private roomId: string = getActiveRoomId();
-  private wsConnected: boolean = false;
-  private reconnectTimer: any = null;
+  private isConnected: boolean = false;
+  private processedSignals = new Set<string>();
 
   constructor() {
-    // 1. Initialize BroadcastChannel (Same-device cross-tab)
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        this.channel = new BroadcastChannel(CHANNEL_NAME);
-        this.channel.onmessage = (event) => {
-          if (event.data && this.isMatchingRoom(event.data) && event.data.senderId !== CLIENT_ID) {
-            this.notifyListeners(event.data);
-          }
-        };
-      } catch (e) {
-        console.warn('BroadcastChannel initialization failed, fallback to StorageEvent', e);
-      }
-    }
-
-    // 2. Initialize localStorage listener (Same-device fallback)
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', (event) => {
-        if (event.key === STORAGE_KEY && event.newValue) {
-          try {
-            const signal: BuzzerSignal = JSON.parse(event.newValue);
-            if (this.isMatchingRoom(signal) && signal.senderId !== CLIENT_ID) {
-              this.notifyListeners(signal);
-            }
-          } catch {
-            // ignore JSON errors
-          }
-        }
-      });
-    }
-
-    // 3. Connect to Cross-Device WebSocket Relay for Deployed/Network operation
-    this.connectWebSocket();
+    this.initLocalTransports();
+    this.connectRealtimeRelay();
   }
 
   public setRoom(room: string) {
-    this.roomId = room.trim().toLowerCase();
+    const newRoom = room.trim().toLowerCase();
+    if (this.roomId === newRoom) return;
+    this.roomId = newRoom;
     setActiveRoomId(this.roomId);
-    this.reconnectWebSocket();
+    this.reconnectRealtimeRelay();
   }
 
   public getRoom(): string {
     return this.roomId;
   }
 
-  public isWsConnected(): boolean {
-    return this.wsConnected;
+  public isLiveConnected(): boolean {
+    return this.isConnected;
   }
 
   private isMatchingRoom(signal: BuzzerSignal): boolean {
@@ -95,53 +78,118 @@ class BuzzerChannelService {
     return signal.room.trim().toLowerCase() === this.roomId;
   }
 
-  private connectWebSocket() {
-    if (typeof window === 'undefined') return;
+  private handleIncomingSignal(signal: BuzzerSignal) {
+    if (!this.isMatchingRoom(signal)) return;
+    if (signal.senderId === CLIENT_ID) return;
 
-    try {
-      const wsUrl = `wss://socketsbay.com/wss/v2/1/${encodeURIComponent(this.roomId)}/`;
-      this.ws = new WebSocket(wsUrl);
+    // Deduplication check
+    const sigKey = `${signal.senderId}_${signal.type}_${signal.timestamp || 0}_${signal.teamId || ''}`;
+    if (this.processedSignals.has(sigKey)) return;
 
-      this.ws.onopen = () => {
-        this.wsConnected = true;
-        console.log('[BuzzerChannel] Connected to multi-device network relay for room:', this.roomId);
-      };
+    this.processedSignals.add(sigKey);
+    // Cleanup old signal keys
+    if (this.processedSignals.size > 200) {
+      const first = Array.from(this.processedSignals)[0];
+      this.processedSignals.delete(first);
+    }
 
-      this.ws.onmessage = (event) => {
-        try {
-          const signal: BuzzerSignal = JSON.parse(event.data);
-          // Filter out echo messages sent by this window instance
-          if (this.isMatchingRoom(signal) && signal.senderId !== CLIENT_ID) {
-            this.notifyListeners(signal);
+    this.notifyListeners(signal);
+  }
+
+  private initLocalTransports() {
+    // 1. BroadcastChannel (Same device, local tabs)
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.channel = new BroadcastChannel(CHANNEL_NAME);
+        this.channel.onmessage = (event) => {
+          if (event.data) {
+            this.handleIncomingSignal(event.data);
           }
-        } catch {
-          // ignore non-json messages
+        };
+      } catch (e) {
+        console.warn('[BuzzerChannel] BroadcastChannel init failed:', e);
+      }
+    }
+
+    // 2. LocalStorage StorageEvent (Local fallback)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (event) => {
+        if (event.key === STORAGE_KEY && event.newValue) {
+          try {
+            const signal: BuzzerSignal = JSON.parse(event.newValue);
+            this.handleIncomingSignal(signal);
+          } catch {
+            // ignore
+          }
         }
-      };
-
-      this.ws.onerror = () => {
-        this.wsConnected = false;
-      };
-
-      this.ws.onclose = () => {
-        this.wsConnected = false;
-        clearTimeout(this.reconnectTimer);
-        this.reconnectTimer = setTimeout(() => this.connectWebSocket(), 3000);
-      };
-    } catch {
-      this.wsConnected = false;
+      });
     }
   }
 
-  private reconnectWebSocket() {
-    if (this.ws) {
-      try {
-        this.ws.close();
-      } catch {
-        // ignore
+  private connectRealtimeRelay() {
+    if (typeof window === 'undefined') return;
+
+    // 1. Primary Cloud Relay: ntfy.sh SSE (Global cross-network, HTTPS/4G/5G resilient)
+    const topic = `gyan_quiz_buzzer_${encodeURIComponent(this.roomId)}`;
+    const ntfyUrl = `https://ntfy.sh/${topic}/json`;
+
+    try {
+      if (this.eventSource) {
+        this.eventSource.close();
       }
+      this.eventSource = new EventSource(ntfyUrl);
+
+      this.eventSource.onopen = () => {
+        this.isConnected = true;
+        console.log('[BuzzerChannel] Connected to global relay for room:', this.roomId);
+      };
+
+      this.eventSource.onmessage = (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          if (parsed.message) {
+            const signal: BuzzerSignal = JSON.parse(parsed.message);
+            this.handleIncomingSignal(signal);
+          }
+        } catch {
+          // ignore non-json
+        }
+      };
+
+      this.eventSource.onerror = () => {
+        // EventSource automatically retries connections
+      };
+    } catch (e) {
+      console.warn('[BuzzerChannel] ntfy SSE connection error:', e);
     }
-    this.connectWebSocket();
+
+    // 2. Secondary Cloud Relay: Backup Public WebSocket Server
+    try {
+      const wsUrl = `wss://demo.piesocket.com/v3/channel_gyan_${encodeURIComponent(this.roomId)}?api_key=VCXSpR3v2ZTGJy63x0xdjYAkuAYwvdPh45iaSuKG&notify_self=0`;
+      if (this.ws) {
+        try { this.ws.close(); } catch {}
+      }
+      this.ws = new WebSocket(wsUrl);
+      this.ws.onopen = () => { this.isConnected = true; };
+      this.ws.onmessage = (event) => {
+        try {
+          const signal: BuzzerSignal = JSON.parse(event.data);
+          this.handleIncomingSignal(signal);
+        } catch {}
+      };
+    } catch {
+      // ignore
+    }
+  }
+
+  private reconnectRealtimeRelay() {
+    if (this.eventSource) {
+      try { this.eventSource.close(); } catch {}
+    }
+    if (this.ws) {
+      try { this.ws.close(); } catch {}
+    }
+    this.connectRealtimeRelay();
   }
 
   public send(signal: BuzzerSignal) {
@@ -152,34 +200,43 @@ class BuzzerChannelService {
       timestamp: signal.timestamp || Date.now(),
     };
 
-    // 1. BroadcastChannel (local browser tabs)
+    // 1. BroadcastChannel
     if (this.channel) {
       try {
         this.channel.postMessage(payload);
       } catch (e) {
-        console.error('Failed to send via BroadcastChannel', e);
+        console.error('Failed to post message on BroadcastChannel:', e);
       }
     }
 
-    // 2. Storage event fallback
+    // 2. LocalStorage Event
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...payload, _time: Date.now() }));
-      } catch (e) {
-        console.error('Failed to set localStorage buzzer signal', e);
-      }
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ ...payload, _time: Date.now() })
+        );
+      } catch {}
     }
 
-    // 3. Network WebSocket relay for deployed cross-device scanning
+    // 3. Primary Cloud HTTP POST Relay (ntfy.sh)
+    if (typeof window !== 'undefined') {
+      const topic = `gyan_quiz_buzzer_${encodeURIComponent(this.roomId)}`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.warn('[BuzzerChannel] ntfy POST error:', err);
+      });
+    }
+
+    // 4. Secondary WebSocket Relay
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify(payload));
-      } catch (e) {
-        console.warn('Failed to send signal over WebSocket network relay', e);
-      }
+      } catch {}
     }
-
-    // Note: Local notifications are driven directly by local actions, so we do not notify self here
   }
 
   public subscribe(callback: (signal: BuzzerSignal) => void): () => void {
@@ -194,7 +251,7 @@ class BuzzerChannelService {
       try {
         cb(signal);
       } catch (e) {
-        console.error('Error in buzzer listener', e);
+        console.error('Error in buzzer channel listener:', e);
       }
     });
   }
