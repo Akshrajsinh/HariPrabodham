@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Eye, Upload, Award, ImageIcon, Plus, X, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Upload, Award, ImageIcon, Plus, X, Trophy, Sparkles } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
 import GlassCard from '../components/GlassCard';
 import DiyaTimer from '../components/DiyaTimer';
-import QuestionStepperBar from '../components/QuestionStepperBar';
 import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
 import { compressImageToDataUrl } from '../utils/image';
@@ -249,21 +248,16 @@ export default function Round1Picture() {
   }
 
   return (
-    <div className="flex-1 w-full flex flex-col items-center justify-between p-4 sm:p-6 gap-4 my-auto max-w-5xl mx-auto">
-      <div className="flex items-center gap-3 text-xs font-score uppercase tracking-widest text-marigold/70">
-        <span className="brass-divider w-8" />
-        Round 1 · Picture Question
-        <span className="brass-divider w-8" />
+    <div className="flex-1 w-full flex flex-col items-center justify-between p-4 sm:p-6 gap-4 my-auto max-w-6xl mx-auto">
+      <div className="w-full flex items-center justify-between gap-4 px-2">
+        <div className="flex items-center gap-3 text-sm font-score uppercase tracking-[0.25em] text-marigold font-extrabold mx-auto">
+          <span className="brass-divider w-12" />
+          <Sparkles size={18} className="text-marigold fill-marigold" />
+          જ્ઞાન કસોટી · Round 1 Picture Question
+          <Sparkles size={18} className="text-marigold fill-marigold" />
+          <span className="brass-divider w-12" />
+        </div>
       </div>
-
-      {/* Check Mark Navigation Stepper */}
-      <QuestionStepperBar
-        round="round1"
-        currentIndex={r1Index}
-        totalQuestions={bank.round1.length}
-        onSelectIndex={(i) => goToR1(i)}
-        questionIds={bank.round1.map((q) => q.id)}
-      />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -274,59 +268,65 @@ export default function Round1Picture() {
           transition={{ duration: 0.4 }}
           className="w-full flex-1 flex flex-col justify-center"
         >
-          <GlassCard arch glow="saffron" className="p-6 sm:p-8 flex flex-col items-center gap-4 text-center">
+          <GlassCard arch glow="saffron" className="p-6 sm:p-8 flex flex-col items-center gap-5 text-center border-2 border-amber-300/40 shadow-[0_12px_45px_rgba(0,0,0,0.6)] bg-gradient-to-b from-white/[0.18] via-white/[0.08] to-purple-950/60">
             {question.image ? (
-              <img
-                src={question.image}
-                alt="Question"
-                className="w-full max-h-[40vh] sm:max-h-[340px] object-contain rounded-2xl bg-black/20 shadow-lg"
-              />
+              <div className="p-1.5 rounded-2xl bg-gradient-to-b from-amber-300/50 via-white/20 to-amber-500/30 shadow-[0_0_35px_rgba(255,184,0,0.3)]">
+                <img
+                  src={question.image}
+                  alt="Question"
+                  className="w-full max-h-[42vh] sm:max-h-[380px] object-contain rounded-xl bg-black/50 shadow-inner"
+                />
+              </div>
             ) : (
-              <div className="w-full h-44 rounded-2xl bg-white/5 flex items-center justify-center text-cream/30">
-                <ImageIcon size={40} />
+              <div className="w-full h-44 rounded-2xl bg-white/10 flex items-center justify-center text-white/50 border border-white/20">
+                <ImageIcon size={44} />
               </div>
             )}
 
-            <h2 className="font-display text-2xl sm:text-3xl text-cream leading-snug">{question.question}</h2>
+            <h2 className="font-display text-3xl sm:text-4xl text-white font-extrabold leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+              {question.question}
+            </h2>
 
             <div className="flex items-center justify-center gap-6 my-1">
-              <DiyaTimer secondsLeft={secondsLeft} totalSeconds={30} running={running} size={100} />
+              <DiyaTimer secondsLeft={secondsLeft} totalSeconds={30} running={running} size={120} />
             </div>
 
             <AnimatePresence>
               {r1Revealed && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center my-1">
-                  <p className="text-xs uppercase tracking-widest text-cream/40 mb-1">The correct answer is</p>
-                  <h2 className="font-display text-3xl sm:text-4xl text-gradient-saffron font-bold">{question.correctAnswer}</h2>
+                  <p className="text-xs font-score uppercase tracking-[0.25em] text-amber-200 font-extrabold mb-1">The correct answer is</p>
+                  <h2 className="font-display text-3xl sm:text-4xl text-gradient-gold font-extrabold drop-shadow-md">{question.correctAnswer}</h2>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {!r1Revealed ? (
-              <button onClick={reveal} className="btn-primary flex items-center gap-2 text-sm px-6 py-2.5 shadow-glow">
+              <button onClick={reveal} className="btn-primary flex items-center gap-2 text-sm px-8 py-3.5 shadow-[0_0_40px_rgba(255,145,0,0.8)] font-extrabold">
                 <Eye size={18} /> Reveal Answer
               </button>
             ) : (
               <div className="w-full space-y-4">
                 <div className="w-full">
-                  <p className="text-xs font-score uppercase tracking-widest text-cream/40 mb-2 text-center">
-                    Award {question.points ?? 15} points to the team that answered correctly:
+                  <p className="text-xs font-score uppercase tracking-widest text-amber-200 mb-2.5 text-center font-extrabold">
+                    ★ Award {question.points ?? 5} points (Correct = +5, Wrong = 0) to the team that answered:
                   </p>
-                  <div className="flex flex-wrap justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2.5">
                     {teams.map((t) => (
                       <button
                         key={t.id}
                         onClick={() => {
-                          awardPoints(t.id, 'round1', question.points ?? 15);
+                          awardPoints(t.id, 'round1', question.points ?? 5);
                           markQuestionCompleted('round1', question.id);
                           setAwardedTeam(t.id);
                           sfx.correct();
                         }}
-                        className={`px-3.5 py-2 rounded-xl text-sm font-score flex items-center gap-1.5 transition-all ${
-                          awardedTeam === t.id ? 'bg-emerald/80 text-white shadow-glow' : 'glass text-cream/70 hover:text-cream'
+                        className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-score font-extrabold flex items-center gap-2 transition-all ${
+                          awardedTeam === t.id
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white shadow-[0_0_25px_rgba(16,185,129,0.8)] border-2 border-white scale-105'
+                            : 'glass text-white hover:text-white hover:border-amber-300/60'
                         }`}
                       >
-                        <Award size={14} /> {t.name}
+                        <Award size={16} className={awardedTeam === t.id ? 'text-white' : 'text-amber-300'} /> {t.name} (+5 pts)
                       </button>
                     ))}
                   </div>
@@ -339,9 +339,9 @@ export default function Round1Picture() {
                       prevR1();
                     }}
                     disabled={r1Index === 0}
-                    className="btn-secondary flex items-center gap-1.5 text-xs px-4"
+                    className="btn-secondary flex items-center gap-1.5 text-xs px-5 py-2.5 border-2 border-white/30 hover:border-amber-300"
                   >
-                    <ChevronLeft size={16} /> Previous
+                    <ChevronLeft size={16} /> Previous Question
                   </button>
                   {r1Index >= bank.round1.length - 1 ? (
                     <>
@@ -350,13 +350,13 @@ export default function Round1Picture() {
                           sfx.navigate();
                           goToRound('scoreboard');
                         }}
-                        className="btn-primary flex items-center gap-1.5 text-xs px-4"
+                        className="btn-primary flex items-center gap-1.5 text-xs px-6 py-2.5 font-extrabold shadow-[0_0_30px_rgba(255,145,0,0.8)]"
                       >
                         <Trophy size={16} /> Finish Round · Scoreboard
                       </button>
                       <button
                         onClick={() => setShowAddForm(true)}
-                        className="btn-secondary flex items-center gap-1.5 text-xs px-4"
+                        className="btn-secondary flex items-center gap-1.5 text-xs px-5 py-2.5 border-2 border-white/30"
                       >
                         <Plus size={16} /> Add Question
                       </button>
@@ -367,7 +367,7 @@ export default function Round1Picture() {
                         sfx.navigate();
                         nextR1();
                       }}
-                      className="btn-primary flex items-center gap-1.5 text-xs px-4"
+                      className="btn-primary flex items-center gap-1.5 text-xs px-6 py-2.5 font-extrabold shadow-[0_0_30px_rgba(255,145,0,0.8)]"
                     >
                       Next Question <ChevronRight size={16} />
                     </button>

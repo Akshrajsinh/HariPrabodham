@@ -1,16 +1,19 @@
 // Real-time cross-tab and cross-device buzzer communication channel
 
 export interface BuzzerSignal {
-  type: 'BUZZ' | 'RESET' | 'LOCK' | 'SYNC';
+  type: 'BUZZ' | 'RESET' | 'LOCK' | 'SYNC' | 'JOIN';
+  senderId?: string;
   teamId?: string;
   teamName?: string;
   timestamp?: number;
   locked?: boolean;
   room?: string;
+  queue?: any[];
 }
 
 const CHANNEL_NAME = 'gyan_quiz_buzzer_channel';
 const STORAGE_KEY = 'gyan_quiz_buzzer_signal';
+const CLIENT_ID = typeof window !== 'undefined' ? Math.random().toString(36).substring(2, 9) : 'server';
 
 // Default global room code for current event session
 export function getActiveRoomId(): string {
@@ -44,7 +47,7 @@ class BuzzerChannelService {
       try {
         this.channel = new BroadcastChannel(CHANNEL_NAME);
         this.channel.onmessage = (event) => {
-          if (event.data && this.isMatchingRoom(event.data)) {
+          if (event.data && this.isMatchingRoom(event.data) && event.data.senderId !== CLIENT_ID) {
             this.notifyListeners(event.data);
           }
         };
@@ -59,7 +62,7 @@ class BuzzerChannelService {
         if (event.key === STORAGE_KEY && event.newValue) {
           try {
             const signal: BuzzerSignal = JSON.parse(event.newValue);
-            if (this.isMatchingRoom(signal)) {
+            if (this.isMatchingRoom(signal) && signal.senderId !== CLIENT_ID) {
               this.notifyListeners(signal);
             }
           } catch {
@@ -96,7 +99,6 @@ class BuzzerChannelService {
     if (typeof window === 'undefined') return;
 
     try {
-      // Public WebSocket relay endpoint using room channel
       const wsUrl = `wss://socketsbay.com/wss/v2/1/${encodeURIComponent(this.roomId)}/`;
       this.ws = new WebSocket(wsUrl);
 
@@ -108,8 +110,8 @@ class BuzzerChannelService {
       this.ws.onmessage = (event) => {
         try {
           const signal: BuzzerSignal = JSON.parse(event.data);
-          if (this.isMatchingRoom(signal)) {
-            // Avoid loopback duplicate triggering if timestamp matches
+          // Filter out echo messages sent by this window instance
+          if (this.isMatchingRoom(signal) && signal.senderId !== CLIENT_ID) {
             this.notifyListeners(signal);
           }
         } catch {
@@ -123,7 +125,6 @@ class BuzzerChannelService {
 
       this.ws.onclose = () => {
         this.wsConnected = false;
-        // Schedule auto-reconnect after 3 seconds
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => this.connectWebSocket(), 3000);
       };
@@ -144,7 +145,12 @@ class BuzzerChannelService {
   }
 
   public send(signal: BuzzerSignal) {
-    const payload: BuzzerSignal = { ...signal, room: this.roomId, timestamp: signal.timestamp || Date.now() };
+    const payload: BuzzerSignal = {
+      ...signal,
+      room: this.roomId,
+      senderId: CLIENT_ID,
+      timestamp: signal.timestamp || Date.now(),
+    };
 
     // 1. BroadcastChannel (local browser tabs)
     if (this.channel) {
@@ -173,8 +179,7 @@ class BuzzerChannelService {
       }
     }
 
-    // 4. Local notification for current window
-    this.notifyListeners(payload);
+    // Note: Local notifications are driven directly by local actions, so we do not notify self here
   }
 
   public subscribe(callback: (signal: BuzzerSignal) => void): () => void {

@@ -119,7 +119,7 @@ export const useGameStore = create<GameState>()(
       r1Revealed: false,
 
       r2Index: 0,
-      r2TimerDuration: 30,
+      r2TimerDuration: 60,
 
       r3Index: 0,
       r3Revealed: false,

@@ -10,7 +10,7 @@ import AmbientBackground from '../components/AmbientBackground';
 import { sfx } from '../utils/sound';
 
 export default function MobileBuzzerClient() {
-  const { teams, buzzerQueue, buzzersLocked, registerBuzzer, resetBuzzers } = useGameStore();
+  const { teams, buzzerQueue, buzzersLocked, registerBuzzer, resetBuzzers, setBuzzerLock } = useGameStore();
   const [roomId, setRoomId] = useState<string>(() => buzzerChannel.getRoom());
 
   // Extract room ID from URL search params on load
@@ -41,17 +41,41 @@ export default function MobileBuzzerClient() {
   // Sync with global buzzer state and listener
   useEffect(() => {
     const unsub = buzzerChannel.subscribe((signal: BuzzerSignal) => {
-      if (signal.type === 'RESET') {
+      if (signal.type === 'SYNC') {
+        if (signal.queue !== undefined) {
+          useGameStore.setState({ buzzerQueue: signal.queue });
+        }
+        if (signal.locked !== undefined) {
+          useGameStore.setState({ buzzersLocked: signal.locked });
+        }
+      } else if (signal.type === 'RESET') {
         resetBuzzers();
         setBuzzStatus({ buzzed: false });
+      } else if (signal.type === 'LOCK' && signal.locked !== undefined) {
+        setBuzzerLock(signal.locked);
       }
     });
+
+    // Send JOIN signal to request latest sync from host
+    if (selectedTeamId || customTeamName) {
+      const currentTeamName = customTeamName || teams.find((t) => t.id === selectedTeamId)?.name;
+      buzzerChannel.send({
+        type: 'JOIN',
+        teamId: selectedTeamId || `custom-${Date.now()}`,
+        teamName: currentTeamName,
+        room: roomId,
+      });
+    }
+
     return unsub;
-  }, [resetBuzzers]);
+  }, [resetBuzzers, setBuzzerLock, selectedTeamId, customTeamName, roomId, teams]);
 
   // Update buzz rank if registered team is in queue
   useEffect(() => {
-    if (!selectedTeamId && !customTeamName) return;
+    if (!selectedTeamId && !customTeamName) {
+      setBuzzStatus({ buzzed: false });
+      return;
+    }
     const currentTeamName = customTeamName || teams.find((t) => t.id === selectedTeamId)?.name;
     const myEntry = buzzerQueue.find(
       (b) => b.teamId === selectedTeamId || (currentTeamName && b.teamName.toLowerCase() === currentTeamName.toLowerCase())
@@ -63,7 +87,7 @@ export default function MobileBuzzerClient() {
         rank: myEntry.rank,
         timeDiffMs: myEntry.timeDiffMs,
       });
-    } else if (buzzerQueue.length === 0) {
+    } else {
       setBuzzStatus({ buzzed: false });
     }
   }, [buzzerQueue, selectedTeamId, customTeamName, teams]);
@@ -74,6 +98,14 @@ export default function MobileBuzzerClient() {
     if (name) setCustomTeamName(name);
     localStorage.setItem('gyan_buzzer_team_id', teamId);
     if (name) localStorage.setItem('gyan_buzzer_team_name', name);
+
+    // Broadcast JOIN signal when selecting team
+    buzzerChannel.send({
+      type: 'JOIN',
+      teamId,
+      teamName: name || teams.find((t) => t.id === teamId)?.name,
+      room: roomId,
+    });
   };
 
   const handleBuzzerPress = () => {

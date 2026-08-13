@@ -6,10 +6,12 @@
   html, body, #root {
     height: 100%;
     width: 100%;
+    background-color: #231005;
+    color: #FFFFFF;
   }
   * {
     scrollbar-width: thin;
-    scrollbar-color: #D4A94A55 transparent;
+    scrollbar-color: rgba(255, 167, 51, 0.6) transparent;
   }
   :focus-visible {
     outline: 2px solid #FFA733;
@@ -19,38 +21,50 @@
 
 @layer components {
   .glass {
-    @apply backdrop-blur-xl bg-white/[0.06] border border-white/10 shadow-glass;
+    @apply backdrop-blur-2xl bg-gradient-to-b from-white/[0.16] via-white/[0.08] to-saffron-900/40
+      border border-white/20 shadow-[0_12px_40px_rgba(0,0,0,0.5)];
+  }
+  .glass-gold {
+    @apply backdrop-blur-2xl bg-gradient-to-b from-saffron-400/25 via-marigold/15 to-saffron-900/50
+      border-2 border-saffron-400/50 shadow-[0_0_35px_rgba(255,107,26,0.35)];
   }
   .glass-light {
-    @apply backdrop-blur-xl bg-white/60 border border-white/40 shadow-glass;
+    @apply backdrop-blur-xl bg-white/80 border border-white/40 shadow-glass text-slate-900;
   }
   .brass-divider {
-    background: linear-gradient(90deg, transparent, #D4A94A, transparent);
-    height: 1px;
+    background: linear-gradient(90deg, transparent, #FFA733, transparent);
+    height: 2px;
   }
   .temple-arch-top {
-    border-top-left-radius: 3rem;
-    border-top-right-radius: 3rem;
+    border-top-left-radius: 2.5rem;
+    border-top-right-radius: 2.5rem;
   }
   .text-gradient-saffron {
-    background: linear-gradient(135deg, #FFD08A 0%, #FF6B1A 60%, #E85400 100%);
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFE4D1 30%, #FF6B1A 70%, #E84E00 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFE2B3 40%, #FFA733 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   .btn-primary {
-    @apply relative font-score font-semibold tracking-wide rounded-2xl px-6 py-3.5
-      bg-gradient-to-br from-saffron-400 to-saffron-600 text-white shadow-glow
-      transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_0_55px_rgba(255,107,26,0.6)]
+    @apply relative font-score font-extrabold tracking-wide rounded-2xl px-6 py-3.5
+      bg-gradient-to-r from-saffron-400 via-marigold to-saffron-500 text-slate-950
+      border-2 border-white/60 shadow-[0_0_35px_rgba(255,107,26,0.7)]
+      transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_55px_rgba(255,167,51,0.9)] hover:border-white
       active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
   }
   .btn-secondary {
-    @apply font-score font-medium rounded-2xl px-6 py-3.5 glass text-cream/90
-      transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98]
+    @apply font-score font-bold rounded-2xl px-6 py-3.5 glass text-white
+      border border-white/25 transition-all duration-200 hover:bg-white/15 hover:border-saffron-400/60 hover:scale-[1.02] active:scale-[0.98]
       disabled:opacity-40 disabled:pointer-events-none;
   }
   .btn-ghost {
-    @apply font-score text-sm text-cream/60 hover:text-cream transition-colors duration-150;
+    @apply font-score text-sm text-white/80 hover:text-white transition-colors duration-150;
   }
 }
 
