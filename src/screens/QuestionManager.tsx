@@ -255,13 +255,59 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const exportFullEventData = () => {
+    try {
+      const fullData = {
+        version: '1.0',
+        exportTimestamp: Date.now(),
+        eventName,
+        subtitle,
+        teams,
+        bank,
+      };
+      const jsonStr = JSON.stringify(fullData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dateStr = new Date().toISOString().split('T')[0];
+      a.download = `gyan-quiz-full-backup-${dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      sfx.correct();
+      setImportMsg('Full event data exported successfully in 1 click!');
+    } catch {
+      sfx.wrong();
+      setImportMsg('Could not export event data.');
+    }
+  };
+
   const handleFile = async (file: File) => {
     try {
       const text = await file.text();
       if (file.name.endsWith('.json')) {
         const parsed = JSON.parse(text);
-        setBank({ ...bank, ...parsed });
-        setImportMsg(`Imported ${Object.keys(parsed).length} section(s) from JSON.`);
+        
+        // Full event backup format check
+        if (parsed.bank || parsed.teams || parsed.eventName) {
+          if (parsed.bank) setBank({ ...bank, ...parsed.bank });
+          if (parsed.teams) {
+            setTeams(parsed.teams);
+            setLocalTeams(parsed.teams);
+          }
+          if (parsed.eventName || parsed.subtitle) {
+            const nextName = parsed.eventName || eventName;
+            const nextSubtitle = parsed.subtitle || subtitle;
+            setEventMeta(nextName, nextSubtitle);
+            setLocalName(nextName);
+            setLocalSubtitle(nextSubtitle);
+          }
+          setImportMsg('Full event backup (questions, teams, settings) restored successfully in 1 click!');
+        } else {
+          // Standard question bank JSON
+          setBank({ ...bank, ...parsed });
+          setImportMsg(`Imported ${Object.keys(parsed).length} section(s) from JSON.`);
+        }
       } else {
         const questions = parseCsvToQuestions(text);
         setBank({ ...bank, round2: questions });
@@ -269,7 +315,7 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
       }
       sfx.correct();
     } catch (err) {
-      setImportMsg('Could not parse that file. Check the format and try again.');
+      setImportMsg('Could not parse that file. Please check the JSON / CSV format and try again.');
       sfx.wrong();
     }
   };
@@ -311,11 +357,20 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         className="glass rounded-3xl p-6 sm:p-8 w-full max-w-2xl max-h-[85vh] overflow-y-auto no-scrollbar"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-3">
           <h2 className="font-display text-2xl text-gradient-saffron">Manage Event Data</h2>
-          <button onClick={onClose} className="text-cream/60 hover:text-cream">
-            <X size={22} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportFullEventData}
+              className="btn-primary text-xs px-3.5 py-2 font-score flex items-center gap-1.5 rounded-xl shadow-glow"
+              title="Export all questions, teams, and event settings in 1 click"
+            >
+              <Download size={15} /> 1-Click Export
+            </button>
+            <button onClick={onClose} className="text-cream/60 hover:text-cream p-1">
+              <X size={22} />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
@@ -328,7 +383,7 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
               }`}
             >
               {t === 'import'
-                ? 'Bulk Import'
+                ? 'Import / Export'
                 : t === 'pictures'
                 ? 'Round 1 · Pictures'
                 : t === 'questions'
@@ -1023,35 +1078,62 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
         )}
 
         {tab === 'import' && (
-          <div className="space-y-4">
-            <p className="text-sm text-cream/60">
-              Import Round 2 (MCQ) questions from a CSV (exported from Excel) or a full question bank JSON.
-              Existing questions for imported sections will be replaced.
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.csv"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn-secondary w-full flex items-center justify-center gap-2"
-            >
-              <Upload size={18} /> Choose File (.json / .csv)
-            </button>
-            <button
-              onClick={downloadTemplate}
-              className="btn-ghost w-full flex items-center justify-center gap-2 py-2"
-            >
-              <Download size={16} /> Download CSV Template
-            </button>
-            {importMsg && <p className="text-sm text-marigold text-center">{importMsg}</p>}
+          <div className="space-y-5">
+            <div className="glass p-5 rounded-2xl space-y-3 border border-saffron-500/30">
+              <div className="flex items-center gap-2 text-saffron-400 font-score font-bold text-sm">
+                <Download size={18} />
+                1-Click Export Event Data
+              </div>
+              <p className="text-xs text-cream/70">
+                Download a complete JSON backup containing all 4 rounds (pictures, MCQs, bhajans, wheel topics), teams, and event title/subtitle in a single click.
+              </p>
+              <button
+                onClick={exportFullEventData}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm font-score shadow-glow"
+              >
+                <Download size={18} /> Export Full Event Backup (.json)
+              </button>
+            </div>
+
+            <div className="glass p-5 rounded-2xl space-y-3 border border-white/10">
+              <div className="flex items-center gap-2 text-marigold font-score font-bold text-sm">
+                <Upload size={18} />
+                1-Click Import Event Data / Questions
+              </div>
+              <p className="text-xs text-cream/70">
+                Upload any exported event backup JSON file to restore all questions, teams, and settings instantly. You can also import CSV files for Round 2 MCQ questions.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.csv"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-secondary w-full flex items-center justify-center gap-2 py-3 text-sm font-score"
+              >
+                <Upload size={18} /> Choose & Import File (.json / .csv)
+              </button>
+              <button
+                onClick={downloadTemplate}
+                className="btn-ghost w-full flex items-center justify-center gap-2 py-2 text-xs"
+              >
+                <Download size={14} /> Download Round 2 MCQ CSV Template
+              </button>
+            </div>
+
+            {importMsg && (
+              <p className="text-sm font-score text-emerald bg-emerald/10 border border-emerald/30 p-3 rounded-xl text-center">
+                {importMsg}
+              </p>
+            )}
+
             <div className="brass-divider" />
-            <p className="text-xs text-cream/40">
-              Currently loaded: {bank.round1.length} picture questions · {bank.round2.length} MCQ questions ·{' '}
-              {bank.round3.length} bhajans · {bank.round4.length} wheel topics
+            <p className="text-xs text-cream/40 text-center font-mono">
+              Currently loaded: {bank.round1.length} pictures · {bank.round2.length} MCQs ·{' '}
+              {bank.round3.length} bhajans · {bank.round4.length} wheel topics · {teams.length} teams
             </p>
           </div>
         )}
