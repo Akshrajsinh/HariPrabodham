@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, QrCode, Trophy } from 'lucide-react';
+import { Play, Hash, Trophy } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
 import GlassCard from '../components/GlassCard';
 import MandalaRing from '../components/MandalaRing';
 import SwaminarayanTilakIcon from '../components/SwaminarayanTilakIcon';
 import RoundRulesModal from '../components/RoundRulesModal';
-import QRCodeModal from '../components/QRCodeModal';
+import RoomInfoModal from '../components/RoomInfoModal';
 import { sfx } from '../utils/sound';
 
 type PlayableRound = 'round1' | 'round2' | 'round3' | 'round4';
@@ -215,7 +215,7 @@ export default function Dashboard() {
             onClick={() => setShowQRModal(true)}
             className="btn-secondary text-xs py-2.5 font-extrabold flex items-center justify-center gap-1.5 border-amber-400/40 text-amber-300"
           >
-            <QrCode size={16} /> Buzzer QR Code
+            <Hash size={16} /> Buzzer Room Code
           </button>
 
           <button
@@ -230,7 +230,7 @@ export default function Dashboard() {
         </div>
       </GlassCard>
 
-      {showQRModal && <QRCodeModal onClose={() => setShowQRModal(false)} />}
+      {showQRModal && <RoomInfoModal onClose={() => setShowQRModal(false)} />}
       {pending && (
         <RoundRulesModal round={pending.round} onStart={confirmPending} onClose={() => setPending(null)} />
       )}

@@ -10,7 +10,7 @@ import {
   Trophy,
   Music4,
   Upload,
-  QrCode,
+  Hash,
   Sparkles,
   Lock,
   Unlock,
@@ -24,7 +24,7 @@ import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
 import GlassCard from '../components/GlassCard';
 import DiyaTimer from '../components/DiyaTimer';
-import QRCodeModal from '../components/QRCodeModal';
+import RoomInfoModal from '../components/RoomInfoModal';
 import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
 import { buzzerChannel } from '../utils/buzzerChannel';
@@ -224,7 +224,7 @@ export default function Round3Bhajan() {
             onClick={() => setShowQRModal(true)}
             className="btn-primary px-5 py-2.5 text-xs font-score flex items-center gap-2 rounded-2xl shadow-[0_0_30px_rgba(255,145,0,0.7)] font-extrabold"
           >
-            <QrCode size={18} /> Scan Team Buzzer QR
+            <Hash size={18} /> Buzzer Room Code
           </button>
         </div>
       </div>
@@ -421,7 +421,7 @@ export default function Round3Bhajan() {
                   <Zap size={32} className="text-marigold animate-pulse" />
                   <p className="text-xs font-bold text-white">No team has buzzed yet!</p>
                   <p className="text-[11px] text-white/60">
-                    Play the tune & click <span className="text-marigold font-bold">Scan Team Buzzer QR</span> above
+                    Play the tune & click <span className="text-marigold font-bold">Buzzer Room Code</span> above
                     to let teams buzz from their phones.
                   </p>
                 </div>
@@ -566,7 +566,7 @@ export default function Round3Bhajan() {
         )}
       </div>
 
-      {showQRModal && <QRCodeModal onClose={() => setShowQRModal(false)} />}
+      {showQRModal && <RoomInfoModal onClose={() => setShowQRModal(false)} />}
     </div>
   );
 }
