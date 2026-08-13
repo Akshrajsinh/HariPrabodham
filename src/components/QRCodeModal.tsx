@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, ExternalLink, QrCode, Smartphone, Wifi } from 'lucide-react';
-import GlassCard from './GlassCard';
+import { X, Copy, Check, ExternalLink, Smartphone, Wifi } from 'lucide-react';
 import { generateQRCodeSVG } from '../utils/qrcode';
 import { buzzerChannel } from '../utils/buzzerChannel';
 
@@ -16,16 +15,16 @@ export default function QRCodeModal({ onClose }: QRCodeModalProps) {
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const buzzerUrl = `${currentOrigin}${currentPath}?mode=buzzer&room=${encodeURIComponent(roomId)}`;
 
-  // Generate SVG QR code locally
+  // Classic Black & White QR Code (Pure Black #000000 on Crisp White #FFFFFF)
   const qrSvgDataUri = useMemo(() => {
-    const svg = generateQRCodeSVG(buzzerUrl, 280, '#FF6B1A', '#120A05');
+    const svg = generateQRCodeSVG(buzzerUrl, 260, '#000000', '#FFFFFF');
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }, [buzzerUrl]);
 
-  // Fallback to QR server API
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(
+  // Fallback API QR code (Black & White)
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(
     buzzerUrl
-  )}&color=FF6B1A&bg=120A05`;
+  )}&color=000000&bg=FFFFFF`;
 
   const [useApiFallback, setUseApiFallback] = useState(false);
 
@@ -37,89 +36,86 @@ export default function QRCodeModal({ onClose }: QRCodeModalProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="w-full max-w-md"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl relative text-center text-white"
         >
-          <GlassCard arch glow="saffron" className="p-7 relative text-center">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-cream/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <X size={20} />
-            </button>
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-lg hover:bg-neutral-800 transition-colors"
+            title="Close"
+          >
+            <X size={20} />
+          </button>
 
-            <div className="flex items-center justify-center gap-2 text-xs font-score uppercase tracking-widest text-marigold mb-3">
-              <QrCode size={18} />
-              Round 3 · Team Buzzer Connect
+          {/* Title */}
+          <h2 className="font-display text-2xl font-bold text-white mb-1">
+            Scan QR Code
+          </h2>
+          <p className="text-neutral-400 text-xs mb-4">
+            Scan with any smartphone camera to open the mobile buzzer
+          </p>
+
+          {/* Room Code */}
+          <div className="inline-flex items-center gap-1.5 bg-neutral-900 border border-neutral-800 px-3.5 py-1 rounded-full text-xs font-mono text-neutral-300 mb-4">
+            <Wifi size={13} className="text-neutral-400" />
+            <span>Room Code: <strong className="text-white uppercase">{roomId}</strong></span>
+          </div>
+
+          {/* Simple Black & White QR Code Box */}
+          <div className="mx-auto w-60 h-60 bg-white border border-neutral-300 rounded-xl p-3 shadow-md flex items-center justify-center mb-5">
+            <img
+              src={useApiFallback ? qrApiUrl : qrSvgDataUri}
+              alt="QR Code"
+              className="w-full h-full object-contain"
+              onError={() => setUseApiFallback(true)}
+            />
+          </div>
+
+          {/* Simple 3 Steps */}
+          <div className="grid grid-cols-3 gap-2 mb-5 text-center">
+            <div className="bg-neutral-900 border border-neutral-800 p-2.5 rounded-xl">
+              <span className="text-[10px] font-bold text-neutral-400 block uppercase">Step 1</span>
+              <span className="text-xs text-white font-medium block">Scan QR</span>
             </div>
-
-            <h2 className="font-display text-2xl text-cream font-bold mb-1">Scan to Join Buzzer</h2>
-            <p className="text-cream/60 text-xs mb-4">
-              Scan this QR code with any smartphone camera (or open link) to connect your phone as a live buzzer!
-            </p>
-
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <span className="text-[11px] font-score text-emerald flex items-center gap-1 bg-emerald/10 border border-emerald/30 px-3 py-1 rounded-full">
-                <Wifi size={12} /> Room Code: <strong className="text-white uppercase font-mono">{roomId}</strong>
-              </span>
+            <div className="bg-neutral-900 border border-neutral-800 p-2.5 rounded-xl">
+              <span className="text-[10px] font-bold text-neutral-400 block uppercase">Step 2</span>
+              <span className="text-xs text-white font-medium block">Select Team</span>
             </div>
-
-            {/* QR Code Container */}
-            <div className="mx-auto w-64 h-64 bg-night/80 border-2 border-saffron-500/50 rounded-3xl p-3 shadow-glow flex flex-col items-center justify-center mb-5">
-              <img
-                src={useApiFallback ? qrApiUrl : qrSvgDataUri}
-                alt="Scan to open team buzzer"
-                className="w-full h-full object-contain rounded-2xl"
-                onError={() => setUseApiFallback(true)}
-              />
+            <div className="bg-neutral-900 border border-neutral-800 p-2.5 rounded-xl">
+              <span className="text-[10px] font-bold text-neutral-400 block uppercase">Step 3</span>
+              <span className="text-xs text-white font-medium block">Hit Buzzer</span>
             </div>
+          </div>
 
-            {/* Steps Guide */}
-            <div className="grid grid-cols-3 gap-2 mb-5 text-left">
-              <div className="glass p-2.5 rounded-xl text-center">
-                <span className="font-score text-saffron-400 font-bold text-xs block">STEP 1</span>
-                <span className="text-[11px] text-cream/70 leading-tight">Scan QR code</span>
-              </div>
-              <div className="glass p-2.5 rounded-xl text-center">
-                <span className="font-score text-saffron-400 font-bold text-xs block">STEP 2</span>
-                <span className="text-[11px] text-cream/70 leading-tight">Select Team</span>
-              </div>
-              <div className="glass p-2.5 rounded-xl text-center">
-                <span className="font-score text-saffron-400 font-bold text-xs block">STEP 3</span>
-                <span className="text-[11px] text-cream/70 leading-tight">Hit BUZZER!</span>
-              </div>
-            </div>
-
-            {/* Link & Controls */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl p-2 pl-3">
-                <span className="text-xs text-cream/60 truncate font-mono flex-1">{buzzerUrl}</span>
-                <button
-                  onClick={copyUrl}
-                  className="btn-secondary px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shrink-0"
-                >
-                  {copied ? <Check size={14} className="text-emerald" /> : <Copy size={14} />}
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-
-              <a
-                href={buzzerUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary w-full flex items-center justify-center gap-2 text-xs py-2.5"
+          {/* URL & Controls */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl p-2 pl-3">
+              <span className="text-xs text-neutral-400 truncate font-mono flex-1 text-left">{buzzerUrl}</span>
+              <button
+                onClick={copyUrl}
+                className="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 shrink-0 border border-neutral-700 transition-colors"
               >
-                <Smartphone size={16} /> Open Buzzer in New Window <ExternalLink size={14} />
-              </a>
+                {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
             </div>
-          </GlassCard>
+
+            <a
+              href={buzzerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full bg-white hover:bg-neutral-200 text-black font-bold flex items-center justify-center gap-2 text-xs py-2.5 rounded-xl transition-colors"
+            >
+              <Smartphone size={16} /> Open Buzzer in New Tab <ExternalLink size={14} />
+            </a>
+          </div>
         </motion.div>
       </div>
     </AnimatePresence>
   );
 }
-

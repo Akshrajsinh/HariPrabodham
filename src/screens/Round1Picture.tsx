@@ -5,6 +5,7 @@ import { useGameStore } from '../store/useGameStore';
 import { usePresenterActions } from '../store/usePresenterActions';
 import { useCountdown } from '../hooks/useCountdown';
 import GlassCard from '../components/GlassCard';
+import SwaminarayanTilakIcon from '../components/SwaminarayanTilakIcon';
 import DiyaTimer from '../components/DiyaTimer';
 import { fireMarigoldBurst } from '../components/MarigoldConfetti';
 import { sfx } from '../utils/sound';
@@ -268,20 +269,28 @@ export default function Round1Picture() {
           transition={{ duration: 0.4 }}
           className="w-full flex-1 flex flex-col justify-center"
         >
-          <GlassCard arch glow="saffron" className="p-6 sm:p-8 flex flex-col items-center gap-5 text-center border-2 border-amber-300/40 shadow-[0_12px_45px_rgba(0,0,0,0.6)] bg-gradient-to-b from-white/[0.18] via-white/[0.08] to-purple-950/60">
-            {question.image ? (
-              <div className="p-1.5 rounded-2xl bg-gradient-to-b from-amber-300/50 via-white/20 to-amber-500/30 shadow-[0_0_35px_rgba(255,184,0,0.3)]">
-                <img
-                  src={question.image}
-                  alt="Question"
-                  className="w-full max-h-[42vh] sm:max-h-[380px] object-contain rounded-xl bg-black/50 shadow-inner"
-                />
+          {/* Main Question Shrine Card with Swaminarayan Tilak Crest */}
+          <div className="relative w-full">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_20px_rgba(255,167,51,0.9)] flex items-center justify-center p-1">
+                <SwaminarayanTilakIcon size={30} />
               </div>
-            ) : (
-              <div className="w-full h-44 rounded-2xl bg-white/10 flex items-center justify-center text-white/50 border border-white/20">
-                <ImageIcon size={44} />
-              </div>
-            )}
+            </div>
+
+            <GlassCard arch glow="saffron" className="p-6 sm:p-8 flex flex-col items-center gap-5 text-center border-2 border-amber-300/40 shadow-[0_12px_45px_rgba(0,0,0,0.6)] bg-gradient-to-b from-white/[0.18] via-white/[0.08] to-purple-950/60">
+              {question.image ? (
+                <div className="p-1.5 rounded-2xl bg-gradient-to-b from-amber-300/50 via-white/20 to-amber-500/30 shadow-[0_0_35px_rgba(255,184,0,0.3)]">
+                  <img
+                    src={question.image}
+                    alt="Question"
+                    className="w-full max-h-[42vh] sm:max-h-[380px] object-contain rounded-xl bg-black/50 shadow-inner"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-44 rounded-2xl bg-white/10 flex items-center justify-center text-white/50 border border-white/20">
+                  <ImageIcon size={44} />
+                </div>
+              )}
 
             <h2 className="font-display text-3xl sm:text-4xl text-white font-extrabold leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
               {question.question}
@@ -376,6 +385,7 @@ export default function Round1Picture() {
               </div>
             )}
           </GlassCard>
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>
