@@ -36,13 +36,16 @@ export default function Dashboard() {
     setPending(null);
   };
 
-  const gurus = [
-    { id: 'guru1', name: 'શ્રી હરિકૃષ્ણ મહારાજ', img: '/images/guru1.jpg', rotate: -6 },
-    { id: 'guru2', name: 'ગુણાતીતાનંદ સ્વામી', img: '/images/guru2.jpg', rotate: 5 },
-    { id: 'swamiji1', name: 'હરિપ્રસાદ સ્વામીજી', img: '/images/swamiji1.jpg', rotate: -4 },
-    { id: 'swamiji2', name: 'પ્રબોધ સ્વામીજી', img: '/images/swamiji2.jpg', rotate: 4 },
+  const leftGurus = [
+    { id: 'guru1', name: 'શ્રી સ્વામિનારાયણ ભગવાન', img: '/images/guru1.jpg', rotate: -8 },
     { id: 'guru3', name: 'શાસ્ત્રીજી મહારાજ', img: '/images/guru3.jpg', rotate: -5 },
-    { id: 'guru4', name: 'યોગીજી મહારાજ', img: '/images/guru4.jpg', rotate: 6 },
+    { id: 'swamiji1', name: 'હરિપ્રસાદ સ્વામીજી', img: '/images/swamiji1.jpg', rotate: -8 },
+  ];
+
+  const rightGurus = [
+    { id: 'guru2', name: 'ગુણાતીતાનંદ સ્વામી', img: '/images/guru2.jpg', rotate: 8 },
+    { id: 'guru4', name: 'યોગીજી મહારાજ', img: '/images/guru4.jpg', rotate: 5 },
+    { id: 'swamiji2', name: 'પ્રબોધ સ્વામીજી', img: '/images/swamiji2.jpg', rotate: 8 },
   ];
 
   return (
@@ -52,22 +55,70 @@ export default function Dashboard() {
         <MandalaRing size={680} />
       </div>
 
-      {/* 6 Divine Guru Parampara Portraits Row (Fits 100% without scrolling) */}
-      <div className="relative z-10 w-full flex items-center justify-center gap-2 sm:gap-4 pt-1">
-        {gurus.map((g) => (
+      {/* LEFT SIDE (3 Divine Guru Portraits) - Visible on XL Screens */}
+      <div className="hidden xl:flex flex-col items-center gap-4 absolute left-4 top-1/2 -translate-y-1/2 z-20">
+        {leftGurus.map((g) => (
           <motion.div
             key={g.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.12, rotate: 0, zIndex: 30 }}
-            className="flex flex-col items-center cursor-pointer transition-all shrink-0"
-            style={{ transform: `rotate(${g.rotate}deg)` }}
+            initial={{ opacity: 0, x: -50, rotate: g.rotate }}
+            animate={{ opacity: 1, x: 0, rotate: g.rotate }}
+            whileHover={{ scale: 1.15, rotate: 0, x: 10, zIndex: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="cursor-pointer transition-all"
           >
-            <div className="p-1 sm:p-1.5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_25px_rgba(255,167,51,0.6)]">
-              <div className="relative w-20 h-24 sm:w-28 sm:h-36 lg:w-32 lg:h-40 rounded-xl sm:rounded-2xl overflow-hidden bg-black/60 border border-white/30">
+            <div className="p-1 sm:p-1.5 rounded-2xl bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_25px_rgba(255,167,51,0.6)]">
+              <div className="relative w-28 h-34 lg:w-32 lg:h-38 rounded-xl overflow-hidden bg-black/60 border border-white/30">
                 <img src={g.img} alt={g.name} className="w-full h-full object-cover shadow-2xl" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex items-end justify-center p-1">
-                  <span className="text-[9px] sm:text-[11px] font-score font-extrabold text-amber-200 text-center drop-shadow-md leading-tight">
+                  <span className="text-[10px] lg:text-[11px] font-score font-extrabold text-amber-200 text-center drop-shadow-md leading-tight">
+                    {g.name}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* RIGHT SIDE (3 Divine Guru Portraits) - Visible on XL Screens */}
+      <div className="hidden xl:flex flex-col items-center gap-4 absolute right-4 top-1/2 -translate-y-1/2 z-20">
+        {rightGurus.map((g) => (
+          <motion.div
+            key={g.id}
+            initial={{ opacity: 0, x: 50, rotate: g.rotate }}
+            animate={{ opacity: 1, x: 0, rotate: g.rotate }}
+            whileHover={{ scale: 1.15, rotate: 0, x: -10, zIndex: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="cursor-pointer transition-all"
+          >
+            <div className="p-1 sm:p-1.5 rounded-2xl bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_25px_rgba(255,167,51,0.6)]">
+              <div className="relative w-28 h-34 lg:w-32 lg:h-38 rounded-xl overflow-hidden bg-black/60 border border-white/30">
+                <img src={g.img} alt={g.name} className="w-full h-full object-cover shadow-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex items-end justify-center p-1">
+                  <span className="text-[10px] lg:text-[11px] font-score font-extrabold text-amber-200 text-center drop-shadow-md leading-tight">
+                    {g.name}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Mobile / Tablet 6 Guru Portraits Top Row (Visible below XL screens) */}
+      <div className="flex xl:hidden flex-wrap items-center justify-center gap-2 sm:gap-3 pt-1">
+        {[...leftGurus, ...rightGurus].map((g) => (
+          <motion.div
+            key={g.id}
+            whileHover={{ scale: 1.1, rotate: 0 }}
+            className="cursor-pointer transition-all"
+            style={{ transform: `rotate(${g.rotate}deg)` }}
+          >
+            <div className="p-1 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-600 border border-white shadow-md">
+              <div className="relative w-18 h-22 sm:w-24 sm:h-30 rounded-xl overflow-hidden bg-black/60">
+                <img src={g.img} alt={g.name} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex items-end justify-center p-1">
+                  <span className="text-[9px] font-score font-extrabold text-amber-200 text-center leading-tight">
                     {g.name}
                   </span>
                 </div>
@@ -82,16 +133,16 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 text-center my-auto max-w-3xl"
+        className="relative z-10 text-center my-auto max-w-2xl"
       >
         {/* Top Swaminarayan Tilak Emblem */}
-        <div className="flex items-center justify-center mb-2">
-          <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_35px_rgba(255,167,51,0.9)] flex items-center justify-center p-1.5">
-            <SwaminarayanTilakIcon size={40} />
+        <div className="flex items-center justify-center mb-3">
+          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 border-2 border-white shadow-[0_0_40px_rgba(255,167,51,0.9)] flex items-center justify-center p-2">
+            <SwaminarayanTilakIcon size={46} />
           </div>
         </div>
 
-        <div className="mb-1 flex items-center justify-center gap-3 text-amber-300/90 font-score text-xs sm:text-sm tracking-[0.25em] uppercase font-extrabold">
+        <div className="mb-2 flex items-center justify-center gap-3 text-amber-300/90 font-score text-xs sm:text-sm tracking-[0.25em] uppercase font-extrabold">
           <span className="brass-divider w-10 sm:w-20" />
           <span className="text-amber-400">⚜ 卐</span>
           HARI PRABODHAM
@@ -100,10 +151,10 @@ export default function Dashboard() {
         </div>
 
         {/* Grand Main Title */}
-        <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-black text-gradient-gold drop-shadow-[0_4px_35px_rgba(255,167,51,0.6)]">
+        <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl font-black text-gradient-gold drop-shadow-[0_4px_40px_rgba(255,167,51,0.6)]">
           Hari Prabodham Quiz
         </h1>
-        <p className="mt-1 font-display text-xl sm:text-3xl text-amber-200 font-extrabold">
+        <p className="mt-1 font-display text-2xl sm:text-4xl text-amber-200 font-extrabold">
           હરિપ્રબોધમ જ્ઞાન કસોટી
         </p>
       </motion.div>
@@ -129,7 +180,7 @@ export default function Dashboard() {
         </p>
       )}
 
-      {/* Clean Poster Actions (All round buttons removed, setting is in TopBar!) */}
+      {/* Clean Poster Actions */}
       <GlassCard arch className="relative z-10 w-full max-w-md p-4 sm:p-5 flex flex-col items-center gap-3 border-2 border-amber-400/40 shadow-[0_12px_45px_rgba(0,0,0,0.8)] mb-2" delay={0.2}>
         {!eventStarted ? (
           <button
@@ -137,9 +188,9 @@ export default function Dashboard() {
               sfx.click();
               setPending({ round: 'round1', kind: 'start' });
             }}
-            className="btn-primary w-full flex items-center justify-center gap-2 text-base sm:text-lg py-3 shadow-[0_0_40px_rgba(255,107,26,0.9)] font-black"
+            className="btn-primary w-full flex items-center justify-center gap-2 text-base sm:text-lg py-3.5 shadow-[0_0_40px_rgba(255,107,26,0.9)] font-black"
           >
-            <Play size={20} fill="currentColor" /> Start Hari Prabodham Quiz
+            <Play size={22} fill="currentColor" /> Start Hari Prabodham Quiz
           </button>
         ) : (
           <button
@@ -153,9 +204,9 @@ export default function Dashboard() {
                 goToRound(target);
               }
             }}
-            className="btn-primary w-full flex items-center justify-center gap-2 text-base sm:text-lg py-3 shadow-[0_0_40px_rgba(255,107,26,0.9)] font-black"
+            className="btn-primary w-full flex items-center justify-center gap-2 text-base sm:text-lg py-3.5 shadow-[0_0_40px_rgba(255,107,26,0.9)] font-black"
           >
-            <Play size={20} fill="currentColor" /> Continue Event
+            <Play size={22} fill="currentColor" /> Continue Event
           </button>
         )}
 
