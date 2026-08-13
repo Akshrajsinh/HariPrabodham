@@ -11,6 +11,19 @@ import { sfx } from '../utils/sound';
 
 export default function MobileBuzzerClient() {
   const { teams, buzzerQueue, buzzersLocked, registerBuzzer, resetBuzzers } = useGameStore();
+  const [roomId, setRoomId] = useState<string>(() => buzzerChannel.getRoom());
+
+  // Extract room ID from URL search params on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlRoom = params.get('room');
+      if (urlRoom) {
+        buzzerChannel.setRoom(urlRoom);
+        setRoomId(urlRoom.toLowerCase());
+      }
+    }
+  }, []);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
     return typeof localStorage !== 'undefined' ? localStorage.getItem('gyan_buzzer_team_id') : null;
@@ -92,6 +105,7 @@ export default function MobileBuzzerClient() {
       teamId: finalTeamId,
       teamName: finalName,
       timestamp,
+      room: roomId,
     });
 
     if (result.rank) {
@@ -114,8 +128,8 @@ export default function MobileBuzzerClient() {
           Gyan Quiz Buzzer
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-score text-cream/50 uppercase tracking-widest flex items-center gap-1">
-            <Smartphone size={14} className="text-marigold" /> Live Connected
+          <span className="text-[11px] font-score text-cream/60 uppercase tracking-widest flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+            <Smartphone size={13} className="text-marigold" /> Room: <strong className="text-saffron-400 font-mono">{roomId}</strong>
           </span>
         </div>
       </div>

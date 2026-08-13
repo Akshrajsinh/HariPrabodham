@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, ExternalLink, QrCode, Smartphone } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, QrCode, Smartphone, Wifi } from 'lucide-react';
 import GlassCard from './GlassCard';
+import { generateQRCodeSVG } from '../utils/qrcode';
+import { buzzerChannel } from '../utils/buzzerChannel';
 
 interface QRCodeModalProps {
   onClose: () => void;
@@ -9,14 +11,23 @@ interface QRCodeModalProps {
 
 export default function QRCodeModal({ onClose }: QRCodeModalProps) {
   const [copied, setCopied] = useState(false);
+  const roomId = buzzerChannel.getRoom();
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const buzzerUrl = `${currentOrigin}${currentPath}?mode=buzzer`;
+  const buzzerUrl = `${currentOrigin}${currentPath}?mode=buzzer&room=${encodeURIComponent(roomId)}`;
 
-  // Fallback to QR server API for guaranteed crisp SVG rendering
+  // Generate SVG QR code locally
+  const qrSvgDataUri = useMemo(() => {
+    const svg = generateQRCodeSVG(buzzerUrl, 280, '#FF6B1A', '#120A05');
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }, [buzzerUrl]);
+
+  // Fallback to QR server API
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(
     buzzerUrl
   )}&color=FF6B1A&bg=120A05`;
+
+  const [useApiFallback, setUseApiFallback] = useState(false);
 
   const copyUrl = () => {
     navigator.clipboard.writeText(buzzerUrl);
@@ -46,33 +57,36 @@ export default function QRCodeModal({ onClose }: QRCodeModalProps) {
               Round 3 · Team Buzzer Connect
             </div>
 
-            <h2 className="font-display text-2xl text-cream font-bold mb-2">Scan to Join Buzzer</h2>
-            <p className="text-cream/60 text-xs mb-6">
-              Scan this QR code with any smartphone camera or open the link below to turn your phone into a live buzzer!
+            <h2 className="font-display text-2xl text-cream font-bold mb-1">Scan to Join Buzzer</h2>
+            <p className="text-cream/60 text-xs mb-4">
+              Scan this QR code with any smartphone camera (or open link) to connect your phone as a live buzzer!
             </p>
 
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <span className="text-[11px] font-score text-emerald flex items-center gap-1 bg-emerald/10 border border-emerald/30 px-3 py-1 rounded-full">
+                <Wifi size={12} /> Room Code: <strong className="text-white uppercase font-mono">{roomId}</strong>
+              </span>
+            </div>
+
             {/* QR Code Container */}
-            <div className="mx-auto w-64 h-64 bg-night/80 border-2 border-saffron-500/50 rounded-3xl p-3 shadow-glow flex flex-col items-center justify-center mb-6">
+            <div className="mx-auto w-64 h-64 bg-night/80 border-2 border-saffron-500/50 rounded-3xl p-3 shadow-glow flex flex-col items-center justify-center mb-5">
               <img
-                src={qrApiUrl}
+                src={useApiFallback ? qrApiUrl : qrSvgDataUri}
                 alt="Scan to open team buzzer"
                 className="w-full h-full object-contain rounded-2xl"
-                onError={(e) => {
-                  // Fallback rendering if API offline
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
+                onError={() => setUseApiFallback(true)}
               />
             </div>
 
             {/* Steps Guide */}
-            <div className="grid grid-cols-3 gap-2 mb-6 text-left">
+            <div className="grid grid-cols-3 gap-2 mb-5 text-left">
               <div className="glass p-2.5 rounded-xl text-center">
                 <span className="font-score text-saffron-400 font-bold text-xs block">STEP 1</span>
                 <span className="text-[11px] text-cream/70 leading-tight">Scan QR code</span>
               </div>
               <div className="glass p-2.5 rounded-xl text-center">
                 <span className="font-score text-saffron-400 font-bold text-xs block">STEP 2</span>
-                <span className="text-[11px] text-cream/70 leading-tight">Select Team Name</span>
+                <span className="text-[11px] text-cream/70 leading-tight">Select Team</span>
               </div>
               <div className="glass p-2.5 rounded-xl text-center">
                 <span className="font-score text-saffron-400 font-bold text-xs block">STEP 3</span>
@@ -108,3 +122,4 @@ export default function QRCodeModal({ onClose }: QRCodeModalProps) {
     </AnimatePresence>
   );
 }
+

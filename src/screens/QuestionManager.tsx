@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Upload, Download, Plus, Trash2, Save, PencilLine, Music4, ImageIcon } from 'lucide-react';
+import { X, Upload, Download, Plus, Trash2, Save, PencilLine, Music4, ImageIcon, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { useGameStore } from '../store/useGameStore';
-import type { Team, ImageQuestion, MCQQuestion, BhajanTrack, WheelTopic } from '../types';
+import type { Team, ImageQuestion, MCQQuestion, BhajanTrack, WheelTopic, QuestionBank } from '../types';
 import { sfx } from '../utils/sound';
 import { compressImageToDataUrl } from '../utils/image';
 
@@ -72,6 +72,50 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
   const [localName, setLocalName] = useState(eventName);
   const [localSubtitle, setLocalSubtitle] = useState(subtitle);
   const [importMsg, setImportMsg] = useState('');
+
+  // Drag & drop state
+  const [draggedOptionIdx, setDraggedOptionIdx] = useState<number | null>(null);
+  const [draggedBankItem, setDraggedBankItem] = useState<{ round: keyof QuestionBank; index: number } | null>(null);
+
+  // Reorder MCQ draft options and automatically update correctIndex to match the moved option!
+  const moveMcqOption = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= 4 || toIndex >= 4) return;
+    const correctVal = mcqDraft.options[mcqDraft.correctIndex];
+    const newOptions = [...mcqDraft.options] as [string, string, string, string];
+    const [moved] = newOptions.splice(fromIndex, 1);
+    newOptions.splice(toIndex, 0, moved);
+
+    // Determine new correct index
+    let newCorrectIndex = newOptions.indexOf(correctVal);
+    if (newCorrectIndex === -1 || correctVal.trim() === '') {
+      if (mcqDraft.correctIndex === fromIndex) {
+        newCorrectIndex = toIndex;
+      } else if (fromIndex < mcqDraft.correctIndex && toIndex >= mcqDraft.correctIndex) {
+        newCorrectIndex = mcqDraft.correctIndex - 1;
+      } else if (fromIndex > mcqDraft.correctIndex && toIndex <= mcqDraft.correctIndex) {
+        newCorrectIndex = mcqDraft.correctIndex + 1;
+      } else {
+        newCorrectIndex = mcqDraft.correctIndex;
+      }
+    }
+
+    setMcqDraft({
+      ...mcqDraft,
+      options: newOptions,
+      correctIndex: Math.max(0, Math.min(3, newCorrectIndex)) as 0 | 1 | 2 | 3,
+    });
+    sfx.click();
+  };
+
+  // Reorder items in Question Bank list
+  const moveBankItem = (roundKey: keyof QuestionBank, fromIndex: number, toIndex: number) => {
+    const list = [...bank[roundKey]];
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    setBank({ ...bank, [roundKey]: list as any });
+    sfx.click();
+  };
 
   // Dynamic "type your own" forms
   const [pictureDraft, setPictureDraft] = useState<ImageQuestion>(emptyPicture());
@@ -395,7 +439,24 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar pr-1">
                 {bank.round1.map((p, i) => (
-                  <div key={p.id} className="glass rounded-xl px-4 py-2.5 flex items-center gap-3">
+                  <div
+                    key={p.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(i));
+                      setDraggedBankItem({ round: 'round1', index: i });
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedBankItem && draggedBankItem.round === 'round1') {
+                        moveBankItem('round1', draggedBankItem.index, i);
+                      }
+                      setDraggedBankItem(null);
+                    }}
+                    className="glass rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-saffron-400/40 cursor-grab active:cursor-grabbing transition-colors"
+                  >
+                    <GripVertical size={16} className="text-cream/30 hover:text-saffron-400 shrink-0" />
                     <span className="text-xs text-cream/40 font-score w-5 shrink-0">{i + 1}.</span>
                     {p.image ? (
                       <img src={p.image} alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />
@@ -403,6 +464,26 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
                       <ImageIcon size={16} className="text-cream/30 shrink-0" />
                     )}
                     <span className="flex-1 text-sm text-cream/80 truncate">{p.question || '(untitled)'}</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveBankItem('round1', i, i - 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === bank.round1.length - 1}
+                        onClick={() => moveBankItem('round1', i, i + 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <button onClick={() => editPicture(p)} className="text-cream/40 hover:text-marigold p-1.5">
                       <PencilLine size={15} />
                     </button>
@@ -429,14 +510,40 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
                 rows={2}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-cream focus:border-saffron-400 outline-none resize-none"
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-cream/50 mb-1">
+                  <span>Options (Drag handles or use arrows to reorder)</span>
+                  <span className="text-emerald font-semibold">Correct Answer Index syncs automatically</span>
+                </div>
                 {mcqDraft.options.map((opt, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(i));
+                      setDraggedOptionIdx(i);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedOptionIdx !== null) {
+                        moveMcqOption(draggedOptionIdx, i);
+                      }
+                      setDraggedOptionIdx(null);
+                    }}
+                    className={`flex items-center gap-2 p-2 rounded-xl border transition-all ${
+                      mcqDraft.correctIndex === i
+                        ? 'bg-emerald/10 border-emerald/40'
+                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <GripVertical size={16} className="text-cream/30 hover:text-saffron-400 cursor-grab active:cursor-grabbing shrink-0" />
                     <button
+                      type="button"
                       onClick={() => setMcqDraft({ ...mcqDraft, correctIndex: i as 0 | 1 | 2 | 3 })}
                       title="Mark as correct answer"
                       className={`h-8 w-8 shrink-0 rounded-full font-score text-xs font-bold flex items-center justify-center transition-colors ${
-                        mcqDraft.correctIndex === i ? 'bg-emerald text-white' : 'bg-white/10 text-cream/50'
+                        mcqDraft.correctIndex === i ? 'bg-emerald text-white shadow-glow' : 'bg-white/10 text-cream/50 hover:bg-white/20'
                       }`}
                     >
                       {String.fromCharCode(65 + i)}
@@ -451,10 +558,30 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
                       placeholder={`Option ${String.fromCharCode(65 + i)}`}
                       className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-cream focus:border-saffron-400 outline-none"
                     />
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveMcqOption(i, i - 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Option Up"
+                      >
+                        <ChevronUp size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === 3}
+                        onClick={() => moveMcqOption(i, i + 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Option Down"
+                      >
+                        <ChevronDown size={15} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-cream/40">Tap a letter to mark the correct answer (currently {String.fromCharCode(65 + mcqDraft.correctIndex)}).</p>
+              <p className="text-[11px] text-cream/40">Tap a letter button (A-D) to mark the correct answer (currently {String.fromCharCode(65 + mcqDraft.correctIndex)}). Dragging options updates the correct index automatically.</p>
               <textarea
                 value={mcqDraft.explanation}
                 onChange={(e) => setMcqDraft({ ...mcqDraft, explanation: e.target.value })}
@@ -510,9 +637,46 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar pr-1">
                 {bank.round2.map((q, i) => (
-                  <div key={q.id} className="glass rounded-xl px-4 py-2.5 flex items-center gap-3">
+                  <div
+                    key={q.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(i));
+                      setDraggedBankItem({ round: 'round2', index: i });
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedBankItem && draggedBankItem.round === 'round2') {
+                        moveBankItem('round2', draggedBankItem.index, i);
+                      }
+                      setDraggedBankItem(null);
+                    }}
+                    className="glass rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-saffron-400/40 cursor-grab active:cursor-grabbing transition-colors"
+                  >
+                    <GripVertical size={16} className="text-cream/30 hover:text-saffron-400 shrink-0" />
                     <span className="text-xs text-cream/40 font-score w-5 shrink-0">{i + 1}.</span>
                     <span className="flex-1 text-sm text-cream/80 truncate">{q.question || '(untitled)'}</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveBankItem('round2', i, i - 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === bank.round2.length - 1}
+                        onClick={() => moveBankItem('round2', i, i + 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <button onClick={() => editMcq(q)} className="text-cream/40 hover:text-marigold p-1.5">
                       <PencilLine size={15} />
                     </button>
@@ -640,10 +804,47 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar pr-1">
                 {bank.round3.map((b, i) => (
-                  <div key={b.id} className="glass rounded-xl px-4 py-2.5 flex items-center gap-3">
+                  <div
+                    key={b.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(i));
+                      setDraggedBankItem({ round: 'round3', index: i });
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedBankItem && draggedBankItem.round === 'round3') {
+                        moveBankItem('round3', draggedBankItem.index, i);
+                      }
+                      setDraggedBankItem(null);
+                    }}
+                    className="glass rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-saffron-400/40 cursor-grab active:cursor-grabbing transition-colors"
+                  >
+                    <GripVertical size={16} className="text-cream/30 hover:text-saffron-400 shrink-0" />
                     <span className="text-xs text-cream/40 font-score w-5 shrink-0">{i + 1}.</span>
                     <span className="flex-1 text-sm text-cream/80 truncate">{b.bhajanName || '(untitled)'}</span>
                     {b.audioUrl && <Music4 size={13} className="text-emerald shrink-0" />}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveBankItem('round3', i, i - 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === bank.round3.length - 1}
+                        onClick={() => moveBankItem('round3', i, i + 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <button onClick={() => editBhajan(b)} className="text-cream/40 hover:text-marigold p-1.5">
                       <PencilLine size={15} />
                     </button>
@@ -708,8 +909,25 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
                 {bank.round4.length} topic{bank.round4.length === 1 ? '' : 's'} on the wheel
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar pr-1">
-                {bank.round4.map((t) => (
-                  <div key={t.id} className="glass rounded-xl px-4 py-2.5 flex items-center gap-3">
+                {bank.round4.map((t, i) => (
+                  <div
+                    key={t.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(i));
+                      setDraggedBankItem({ round: 'round4', index: i });
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedBankItem && draggedBankItem.round === 'round4') {
+                        moveBankItem('round4', draggedBankItem.index, i);
+                      }
+                      setDraggedBankItem(null);
+                    }}
+                    className="glass rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-saffron-400/40 cursor-grab active:cursor-grabbing transition-colors"
+                  >
+                    <GripVertical size={16} className="text-cream/30 hover:text-saffron-400 shrink-0" />
                     <span
                       className="h-3 w-3 rounded-full shrink-0"
                       style={{ background: t.color, boxShadow: `0 0 8px ${t.color}` }}
@@ -717,6 +935,26 @@ export default function QuestionManager({ onClose }: { onClose: () => void }) {
                     <span className="flex-1 text-sm text-cream/80 truncate">
                       {t.label || '(untitled)'} {t.isArrivalTopic && <em className="text-marigold/70">· arrival</em>}
                     </span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveBankItem('round4', i, i - 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === bank.round4.length - 1}
+                        onClick={() => moveBankItem('round4', i, i + 1)}
+                        className="text-cream/30 hover:text-cream disabled:opacity-20 p-1 rounded"
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <button onClick={() => editTopic(t)} className="text-cream/40 hover:text-marigold p-1.5">
                       <PencilLine size={15} />
                     </button>
